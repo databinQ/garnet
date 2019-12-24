@@ -14,6 +14,7 @@ class DataPack(object):
     Data structure, store data used by NLP tasks. In most cases, data will be stored in `pandas.DataFrame` structure.
     """
     DATA_FILENAME = "data.dill"
+    MAJOR_NON_TEXT_COLUMNS = []
 
     @property
     def has_label(self) -> bool:
@@ -43,11 +44,27 @@ class DataPack(object):
         """
         Apply function(s) to text columns, results are saved in `name` column
         """
-        raise NotImplemented
+        raise NotImplementedError
+
+    @property
+    def MAJOR_COLUMNS(self):
+        return self.MAJOR_NON_TEXT_COLUMNS + ["text"]
+
+    @property
+    def major_data(self):
+        raise NotImplementedError
+
+    @property
+    def text_columns(self):
+        return [col for col in self.major_data.columns if col not in self.MAJOR_COLUMNS]
 
 
 class ModelDataPack(DataPack):
     """
     Data stored in this instance will be used for training models or testing. Thus, data is organized in proper format.
     """
-    pass
+    def __len__(self):
+        pass
+
+    def shuffle(self):
+        pass
