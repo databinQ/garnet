@@ -17,7 +17,23 @@ class DataPack(object):
     `DataPack` also provides common processing methods, and specific method for specific data structure.
     """
     DATA_FILENAME = "data.dill"
-    INDEX_COLS = ["index"]
+    LABEL_COLUMN = "label"
+
+    def __init__(self, *args, **kwargs):
+        self._data = None
+
+    @property
+    def data(self):
+        """
+        Attribute `data` store the data applied to train or test process.
+        """
+        return self._data
+
+    @property
+    def has_label(self):
+        if self._data is not None and self.LABEL_COLUMN in self._data.columns:
+            return True
+        return False
 
     def save(self, directory_path: typing.Union[str, Path]):
         """
@@ -42,7 +58,3 @@ class DataPack(object):
         file_path = directory_path.joinpath(cls.DATA_FILENAME)
         dp = dill.load(codecs.open(file_path, "rb"))
         return dp
-
-    @property
-    def has_label(self):
-        raise NotImplementedError
