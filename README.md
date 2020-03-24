@@ -4,7 +4,7 @@ Toolkit for deep learning and machine learning, especially for NLP task.
 
 ## Component
 
-### Optimizer
+### Optimizers
 
 - [AdaFactor](garnet/optimizers/adafactor.py)
 
