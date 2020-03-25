@@ -33,13 +33,18 @@ class GroupTextDataPack(TextDataPack):
         self._group_index_column = group_index_column
         self._group_name_column = group_name_column
         self._group_info_columns = group_info_columns or []
-        self._text_columns = text_columns or self.DEFAULT_TEXT_COLUMNS
+        self._text_columns = text_columns or self.DEFAULT_TEXT_COLUMN
 
         self.group_data = None
         self.text_data = None
 
         if chunk_data is not None:
             self.initial_chunk_data(chunk_data)
+        elif chunk_json is not None:
+            self.initial_json_data(chunk_json)
+        else:
+            self.group_data = group_data
+            self.text_data = text_data
 
     def initial_chunk_data(self, chunk_data):
         group_cols = [self._group_index_column]
@@ -48,7 +53,13 @@ class GroupTextDataPack(TextDataPack):
         group_cols += self._group_info_columns
 
         self.group_data = chunk_data[group_cols].drop_duplicates()
-        self.text_data = chunk_data[[self._group_index_column, self._text_columns]].set_index(self._group_index_column)
+        self.text_data = chunk_data[[self._group_index_column, self._text_columns]]
+        self.text_data[self.DEFAULT_TEXT_ID_COLUMN] = range(len(self.text_data))
+        self.text_data = self.text_data[[self.DEFAULT_TEXT_ID_COLUMN, self._group_index_column, self._text_columns]]
+
+    def initial_json_data(self, json_data):
+        # TODO: Finish this method
+        pass
 
     def has_label(self):
         return False
@@ -56,3 +67,31 @@ class GroupTextDataPack(TextDataPack):
     @property
     def num_group(self):
         return 0 if self.group_data is None else len(self.group_data)
+
+    @property
+    def num_sentence(self):
+        return 0 if self.text_data is None else len(self.text_data)
+
+    def apply(self, func: typing.Callable, name=None, verbose=1):
+        self.text_data = self.apply_on_text(
+            self.text_data, func=func, text_column=self._text_columns, name=name, verbose=verbose
+        )
+
+    def make_pairs(self, mode='point', num_pos=1, num_neg=1):
+        pass
+
+    def _mp_point_mode(self, num_pos=1, num_neg=1):
+        group_text_map = self.text_data[[self.DEFAULT_TEXT_ID_COLUMN, self._group_index_column]]
+
+        pairs = []
+        for group_index, group_data in group_text_map.groupby(self._group_index_column):
+            negatives = group_text_map[group_text_map[self._group_index_column] != group_index]
+            for lid in group_data[self.DEFAULT_TEXT_ID_COLUMN]:
+                # Gather positives
+                for rid in group_data[self.DEFAULT_TEXT_ID_COLUMN].sample(n=num_pos):
+                    if lid != rid:
+                        pairs.append((lid, rid, 1))
+                # Gather negatives
+                for rid in negatives[self.DEFAULT_TEXT_ID_COLUMN].sample(n=num_neg):
+                    pairs.append((lid, rid, 0))
+        relation = pd.DataFrame(pairs, columns=["left_id", "right_id", "label"])

@@ -13,13 +13,14 @@ from .. import DataPack
 
 
 class TextDataPack(DataPack):
-    DEFAULT_TEXT_COLUMNS = "text"
+    DEFAULT_TEXT_COLUMN = 'text'
+    DEFAULT_TEXT_ID_COLUMN = 'text_id'
 
     @staticmethod
-    def _apply_on_text(
+    def apply_on_text(
             data: pd.DataFrame,
             func: typing.Callable,
-            text_column: str = "text",
+            text_column: str = 'text',
             name: str = None,
             verbose: int = 1
     ):
