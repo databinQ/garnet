@@ -1,6 +1,6 @@
 # coding: utf-8
 """
-@File   : __init__.py.py
+@File   : __init__.py
 @Author : garnet
 @Time   : 2020/3/3 17:47
 """
@@ -17,23 +17,19 @@ class DataPack(object):
     `DataPack` also provides common processing methods, and specific method for specific data structure.
     """
     DATA_FILENAME = "data.dill"
-    LABEL_COLUMN = "label"
 
     def __init__(self, *args, **kwargs):
-        self._data = None
+        pass
 
-    @property
-    def data(self):
+    def feed_data(self, with_label=True):
         """
-        Attribute `data` store the data applied to train or test process.
+        Return data applied to train or test process.
         """
-        return self._data
+        raise NotImplementedError
 
     @property
     def has_label(self):
-        if self._data is not None and self.LABEL_COLUMN in self._data.columns:
-            return True
-        return False
+        raise NotImplementedError
 
     def save(self, directory_path: typing.Union[str, Path]):
         """
@@ -58,3 +54,6 @@ class DataPack(object):
         file_path = directory_path.joinpath(cls.DATA_FILENAME)
         dp = dill.load(codecs.open(file_path, "rb"))
         return dp
+
+    def apply(self, *args, **kwargs):
+        raise NotImplementedError
