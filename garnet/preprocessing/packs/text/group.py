@@ -6,6 +6,7 @@
 """
 
 import typing
+import numpy as np
 import pandas as pd
 
 from . import TextDataPack
@@ -80,7 +81,7 @@ class GroupTextDataPack(TextDataPack):
     def make_pairs(self, mode='point', num_pos=1, num_neg=1):
         pass
 
-    def _mp_point_mode(self, num_pos=1, num_neg=1):
+    def _make_pair_point_mode(self, num_pos=1, num_neg=1):
         group_text_map = self.text_data[[self.DEFAULT_TEXT_ID_COLUMN, self._group_index_column]]
 
         pairs = []
@@ -95,3 +96,20 @@ class GroupTextDataPack(TextDataPack):
                 for rid in negatives[self.DEFAULT_TEXT_ID_COLUMN].sample(n=num_neg):
                     pairs.append((lid, rid, 0))
         relation = pd.DataFrame(pairs, columns=["left_id", "right_id", "label"])
+
+    class GroupView(object):
+        """
+        Internal class used for `text2group` function.
+        """
+        def __init__(self, data_pack: 'GroupTextDataPack', gid_column: str, tid_column: str):
+            self.data_pack = data_pack
+            self.gid_column = gid_column
+            self.tid_column = tid_column
+
+        def __getitem__(self, index: typing.Optional[int, list, tuple, np.array]):
+            if isinstance(index, int):
+                res = self.data_pack.text_data.loc[self.data_pack.text_data[self.tid_column] == index, self.gid_column]
+                return None if len(res) == 0 else res.iloc[0]
+            else:
+                if isinstance(index, np.array):
+                    assert index.ndim == 1, "Numpy array containing text index must be 1 dimension"
