@@ -10,19 +10,19 @@ import pandas as pd
 from tqdm import tqdm
 
 from .. import DataPack
+from ..constant import *
 
 
 class TextDataPack(DataPack):
-    DEFAULT_TEXT_COLUMN = 'text'
-    DEFAULT_TEXT_ID_COLUMN = 'text_id'
-
     @staticmethod
     def apply_on_text(
             data: pd.DataFrame,
             func: typing.Callable,
-            text_column: str = 'text',
+            text_column: str = COLUMN_TEXT,
             name: str = None,
-            verbose: int = 1
+            verbose: int = 1,
+            *args,
+            **kwargs,
     ):
         """
         Apply preprocess function on text stored in `pandas.DataFrame`.
@@ -37,7 +37,7 @@ class TextDataPack(DataPack):
         new_column = name or text_column
         if verbose:
             tqdm.pandas(desc="Processing " + name + " with " + func.__name__)
-            data[new_column] = data[text_column].progress_apply(func)
+            data[new_column] = data[text_column].progress_apply(func, args=args, **kwargs)
         else:
-            data[new_column] = data[text_column].apply(func)
+            data[new_column] = data[text_column].apply(func, args=args, **kwargs)
         return data
