@@ -5,7 +5,9 @@
 @Time   : 2020/3/25 17:13
 """
 
+import math
 import typing
+import itertools
 import numpy as np
 import pandas as pd
 
@@ -95,8 +97,22 @@ class GroupTextDataPack(TextDataPack):
             self.text_data, func=func, text_column=self._text_columns, name=name, verbose=verbose, *args, **kwargs
         )
 
-    def make_pairs(self, mode='point', num_pos=1, num_neg=1):
-        pass
+    def make_pairs(self, mode='point', num_pos=1, num_neg=1, scale_pos=1., scale_neg=1.):
+        """
+        Generate pairwise data from grouped data.
+        :param mode: Method of generating pairwise data `point` or 'group'
+        :param num_pos: Number of positive samples made from one text, used for `point` method
+        :param num_neg: Number of negative samples made from one text, used for `point` method
+        :param scale_pos: Scale rate of positive text pairs, less or equal than 1.0, used for `group` method
+        :param scale_neg: Scale rate of negative text pairs, greater or equal than 1.0, used for `group` method
+        :return: Pairwise data in `PairwiseTextDataPack` instance
+        """
+        if mode == 'point':
+            return self._make_pair_point_mode(num_pos=num_pos, num_neg=num_neg)
+        elif mode == 'group':
+            return self._make_pair_group_mode(scale_pos=scale_pos, scale_neg=scale_neg)
+        else:
+            raise ValueError("`mode` must be one of ('point', 'group'), got{} instead".format(mode))
 
     def _make_pair_point_mode(self, num_pos=1, num_neg=1):
         group_text_map = self.text_data[[COLUMN_TEXT_ID, self._group_index_column]]
@@ -112,6 +128,37 @@ class GroupTextDataPack(TextDataPack):
                 # Gather negatives
                 for rid in negatives[COLUMN_TEXT_ID].sample(n=num_neg):
                     pairs.append((lid, rid, 0))
+
+        np.random.shuffle(pairs)
+        relation = pd.DataFrame(pairs, columns=[COLUMN_PAIRWISE_LEFT_ID, COLUMN_PAIRWISE_RIGHT_ID, COLUMN_LABEL])
+        share_data = self.text_data[[COLUMN_TEXT_ID, COLUMN_TEXT]]
+        return PairwiseTextDataPack(left=share_data, right=share_data, relation=relation)
+
+    def _make_pair_group_mode(self, scale_pos=1., scale_neg=1.):
+        group_text_map = self.text_data[[COLUMN_TEXT_ID, COLUMN_GROUP_ID]]
+
+        pairs = []
+        for group_index, group_data in group_text_map.groupby(COLUMN_GROUP_ID):
+            pos_pairs = list(itertools.combinations(group_data[COLUMN_TEXT_ID].tolist(), 2))
+            pos_pairs = pos_pairs[:math.ceil(len(pos_pairs) * scale_pos)]
+            pos_pairs = [tuple(list(tp) + [1]) for tp in pos_pairs]
+
+            # If this group only contains single one sentence, then positive pair can not be generated,
+            # and continue to next group
+            if len(pos_pairs) == 0:
+                continue
+
+            negatives = group_text_map[group_text_map[COLUMN_GROUP_ID] != group_index]
+            neg_pairs = []
+            for i in range(math.ceil(len(pos_pairs) * scale_neg)):
+                t_pos_id = group_data[COLUMN_TEXT_ID].sample(n=1).iloc[0]
+                t_neg_id = negatives[COLUMN_TEXT_ID].sample(n=1).iloc[0]
+                neg_pairs.append((t_pos_id, t_neg_id, 0))
+
+            group_pairs = pos_pairs + neg_pairs
+            pairs.extend(group_pairs)
+
+        np.random.shuffle(pairs)
         relation = pd.DataFrame(pairs, columns=[COLUMN_PAIRWISE_LEFT_ID, COLUMN_PAIRWISE_RIGHT_ID, COLUMN_LABEL])
         share_data = self.text_data[[COLUMN_TEXT_ID, COLUMN_TEXT]]
         return PairwiseTextDataPack(left=share_data, right=share_data, relation=relation)
