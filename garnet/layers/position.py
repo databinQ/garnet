@@ -62,8 +62,71 @@ class FixedPositionEmbedding(keras.layers.Layer):
         return dict(list(base_config.items()) + list(config.items()))
 
 
+class PositionEmbedding(keras.layers.Layer):
+    """
+    Trainable position embedding layer
+    """
+
+    def __init__(self,
+                 max_seq_length,
+                 output_dim,
+                 mode='add',
+                 embeddings_initializer='zeros',
+                 **kwargs):
+        """
+        :param max_seq_length: Max sequence length, which is equivalent to vacabulary size of embedding
+        :param output_dim: Output of embedding
+        :param mode: `add` or `mul`
+        :param embeddings_initializer: Embeddings initializer, `zeros` as default
+        :param kwargs:
+        """
+        super(PositionEmbedding, self).__init__(**kwargs)
+        self.supports_masking = True
+
+        self.max_seq_length = max_seq_length
+        self.output_dim = output_dim
+        self.mode = mode
+        self.embeddings_initializer = keras.initializers.get(embeddings_initializer)
+
+    def build(self, input_shape):
+        self.embeddings = self.add_weight(
+            name='position_embeddings',
+            shape=(self.max_seq_length, self.output_dim),
+            initializer=self.embeddings_initializer
+        )
+        super(PositionEmbedding, self).build(input_shape)
+
+    def call(self, inputs, **kwargs):
+        input_shape = K.shape(inputs)
+        batch_size, seq_len = input_shape[0], input_shape[1]
+        pos_embeddings = self.embeddings[:seq_len]
+        pos_embeddings = K.expand_dims(pos_embeddings, 0)
+        if self.mode == 'add':
+            return inputs + pos_embeddings
+        else:
+            pos_embeddings = K.tile(pos_embeddings, [batch_size, 1, 1])
+            return K.concatenate([inputs, pos_embeddings], axis=-1)
+
+    def compute_output_shape(self, input_shape):
+        if self.mode == 'add':
+            return input_shape
+        else:
+            return input_shape[:-1] + (input_shape[-1] + self.output_dim,)
+
+    def get_config(self):
+        config = {
+            'max_seq_length': self.max_seq_length,
+            'output_dim': self.output_dim,
+            'mode': self.mode,
+            'embeddings_initializer': keras.initializers.serialize(self.embeddings_initializer),
+        }
+        base_config = super(PositionEmbedding, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
+
+
 custom_objects = {
     'FixedPositionEmbedding': FixedPositionEmbedding,
+    'PositionEmbedding': PositionEmbedding,
 }
 
 keras.utils.get_custom_objects().update(custom_objects)
