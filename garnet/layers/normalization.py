@@ -1,7 +1,7 @@
 # coding: utf-8
 
 """
-@File   : transformer.py
+@File   : normalization.py
 @Author : garnet
 @Time   : 2020/4/11 11:25
 """
@@ -14,6 +14,7 @@ class LayerNormalization(keras.layers.Layer):
     """
     Layer normalization layer. See [Layer Normalization](https://arxiv.org/abs/1607.06450)
     """
+
     def __init__(self,
                  center=True,
                  scale=True,
@@ -105,33 +106,8 @@ class LayerNormalization(keras.layers.Layer):
         return input_mask
 
 
-class MultiHeadAttention(keras.layers.Layer):
-    """
-    Multi-head attention layer. See [Attention Is All You Need](https://arxiv.org/abs/1706.03762)
-    """
-    def __init__(self,
-                 num_heads,
-                 head_size,
-                 key_size=None,
-                 use_bias=True,
-                 kernel_initializer='glorot_uniform'):
-        """
-        :param num_heads: Number of attention heads
-        :param head_size: Size of single head output
-        :param key_size: Size of query and key vector, which is used when the length of key vector and value vector
-            are different
-        :param kernel_initializer: Regularizer for the kernel weight
-        :param use_bias: Whether use bias term
-        """
-        self.num_heads = num_heads
-        self.head_size = head_size
-        self.key_size = key_size or head_size
-        self.out_dim = num_heads * head_size
-        self.use_bias = use_bias
-        self.kernel_initializer = kernel_initializer
+custom_objects = {
+    'LayerNormalization': LayerNormalization,
+}
 
-    def build(self, input_shape):
-        self.q_dense = keras.layers.Dense(
-            units=1
-        )
-        super(MultiHeadAttention, self).build(input_shape)
+keras.utils.get_custom_objects().update(custom_objects)
