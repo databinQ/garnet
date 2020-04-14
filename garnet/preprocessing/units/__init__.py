@@ -14,7 +14,7 @@ class Unit(metaclass=abc.ABCMeta):
     """
     @abc.abstractmethod
     def transform(self, input_):
-        pass
+        ...
 
 
 class StateUnit(Unit, metaclass=abc.ABCMeta):
@@ -24,10 +24,13 @@ class StateUnit(Unit, metaclass=abc.ABCMeta):
     """
     def __init__(self, *args, **kwargs):
         self._context = dict()
+        self.fitted = False
 
-    @abc.abstractmethod
     def fit(self, input_):
-        pass
+        self.fitted = True
+
+    def reverse_transform(self, input_):
+        ...
 
     @property
     def context(self):
