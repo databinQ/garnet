@@ -72,3 +72,19 @@ class DataPreprocessor(metaclass=abc.ABCMeta):
             directory_path.mkdir(parents=True, exist_ok=True)
 
         dill.dump(self, codecs.open(file_path, "wb"))
+
+    @classmethod
+    def load(cls, directory_path: typing.Union[str, Path]):
+        """
+        Load the fitted `context`. The reverse function of `save`.
+
+        :param directory_path: directory path of the saved model.
+        """
+        directory_path = Path(directory_path)
+        file_path = directory_path.joinpath(cls.DATA_FILENAME)
+        dp = dill.load(codecs.open(file_path, "rb"))
+        return dp
+
+
+def load_data_preprocessor(directory_path: typing.Union[str, Path]):
+    return DataPreprocessor.load(directory_path)

@@ -104,3 +104,7 @@ class ClassifyDataPackMixin(object):
 
     def shuffle(self):
         raise NotImplementedError
+
+
+def load_data_pack(directory_path: typing.Union[str, Path]):
+    return DataPack.load(directory_path)
