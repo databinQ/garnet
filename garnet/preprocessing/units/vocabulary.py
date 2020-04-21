@@ -25,13 +25,11 @@ MASK = '[MASK]'
 
 
 class Vocabulary(StateUnit):
-    def __init__(self, special_tokens=None, with_sos=True, with_eos=True, ignore_case=False):
+    def __init__(self, special_tokens=None, ignore_case=False):
         """
         :param special_tokens: list. e.g. ['<spt1>', '<spt2>', '<spt3>']
         """
         super().__init__()
-        self.with_sos = with_sos
-        self.with_eos = with_eos
         self.ignore_case = ignore_case
 
         self._vocab = {
@@ -46,12 +44,6 @@ class Vocabulary(StateUnit):
 
         self._vocab_rev = dict()
         self._update_vocab_rev()
-
-        self._context['vocab'] = self._vocab
-        self._context['vocab_rev'] = self._vocab_rev
-        self._context['with_sos'] = with_sos
-        self._context['with_eos'] = with_eos
-        self._context['ignore_case'] = ignore_case
 
     def _update_vocab_rev(self):
         vocab_rev = {v: k for k, v in self._vocab.items()}
@@ -90,10 +82,7 @@ class Vocabulary(StateUnit):
     def transform(self, input_: list):
         if self.ignore_case:
             input_ = [token.lower() for token in input_]
-        indexes = [self[token] for token in input_]
-        indexes = [self._vocab[SOS]] + indexes if self.with_sos else indexes
-        indexes = indexes + [self._vocab[EOS]] if self.with_eos else indexes
-        return indexes
+        return [self[token] for token in input_]
 
     def reverse_transform(self, input_: list):
         return [self.id2word(index) for index in input_]
@@ -110,25 +99,25 @@ class Vocabulary(StateUnit):
         safe_save_json(file_path, self._vocab)
 
     @classmethod
-    def read_txt(cls, file_path, encoding='utf-8', with_sos=True, with_eos=True, ignore_case=False):
+    def read_txt(cls, file_path, encoding='utf-8', ignore_case=False):
         path = pathlib.Path(file_path)
         with codecs.open(path, 'r', encoding=encoding) as f:
             tokens = [token.strip() for token in f.readlines() if token.strip()]
             vocab = dict([(token, i) for i, token in enumerate(tokens)])
 
-        instance = cls(with_sos=with_sos, with_eos=with_eos, ignore_case=ignore_case)
+        instance = cls(ignore_case=ignore_case)
         instance._vocab = vocab
         instance._update_vocab_rev()
         return instance
 
     @classmethod
-    def read_json(cls, file_path, encoding='utf-8', with_sos=True, with_eos=True, ignore_case=False):
+    def read_json(cls, file_path, encoding='utf-8', ignore_case=False):
         path = pathlib.Path(file_path)
         check_suffix(path, suffix='json')
         with codecs.open(path, 'r', encoding=encoding) as f:
             vocab = json.load(f)
 
-        instance = cls(with_sos=with_sos, with_eos=with_eos, ignore_case=ignore_case)
+        instance = cls(ignore_case=ignore_case)
         instance._vocab = vocab
         instance._update_vocab_rev()
         return instance
@@ -141,10 +130,6 @@ class BertVocabulary(Vocabulary):
         self._vocab = dict()
         self._vocab_rev = dict()
         self.fit(dict_path)
-
-        self._context['ignore_case'] = ignore_case
-        self._context['vocab'] = self._vocab
-        self._context['vocab_rev'] = self._vocab_rev
 
     def fit(self, file_path):
         with codecs.open(file_path, 'r', encoding='utf-8') as f:

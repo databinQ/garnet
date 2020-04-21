@@ -19,17 +19,46 @@ from ...utils.text import is_control
 
 
 class BaseTokenizer(StateUnit):
-    def __init__(self, vocab: typing.Optional[Vocabulary], *args, **kwargs):
+    def __init__(self, vocab: typing.Optional[Vocabulary], with_sos=True, with_eos=True, max_length=None,
+                 token_sos=SOS, token_eos=EOS, token_pad=PAD, token_unk=UNK,
+                 *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._vocab = vocab
-        self._context['vocab'] = self._vocab
+        self.with_sos = with_sos
+        self.with_eos = with_eos
+        self._token_sos = token_sos
+        self._token_eos = token_eos
+        self._token_pad = token_pad
+        self._token_unk = token_unk
+        self.max_length = max_length
         self.fitted = True
 
     def token2id(self, token):
         """
         Transfer token to index
         """
+        return self._vocab[token]
+
+    def id2token(self, id_):
+        """
+        Transfer id to token
+        """
+        return self._vocab.id2word(id_)
+
+    def _tokenize(self, text):
         raise NotImplementedError
+
+    def tokenize(self, text, max_length=None):
+        tokens = self._tokenize(text)
+        if self.with_sos:
+            tokens.insert(0, self._token_sos)
+        if self.with_eos:
+            tokens.append(self._token_eos)
+
+        max_length = max_length or self.max_length
+        if max_length:
+            pass
+
 
     def _word_piece_tokenize(self, word):
         """
@@ -69,9 +98,9 @@ class BertTokenizer(BaseTokenizer):
         self._token_mask = MASK
 
         self._vocab = BertVocabulary(dict_path=dict_path)
+        self.fitted = True
 
-    def transform(self, input_):
-        text = input_
+    def _tokenize(self, text):
         if self.ignore_case:  # text clean process
             text = unicodedata.normalize('NFD', text)
             text = ''.join([ch for ch in text if unicodedata.category(ch) != 'Mn'])
@@ -92,3 +121,6 @@ class BertTokenizer(BaseTokenizer):
         for word in spaced.strip().split():
             tokens.extend(self._word_piece_tokenize(word))
         return tokens
+
+    def transform(self, input_):
+        pass
