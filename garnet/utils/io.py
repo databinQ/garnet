@@ -46,6 +46,6 @@ def safe_save_json(file_path, dict_data):
 
     with codecs.open(path, 'w', encoding='utf-8') as f:
         if isinstance(dict_data, dict):
-            json.dump(dict_data, f)
+            json.dump(dict_data, f, indent=4, ensure_ascii=False)
         else:
             f.write('\n'.join([json.dumps(d).replace('\n', '').replace('\r', '') for d in dict_data]))

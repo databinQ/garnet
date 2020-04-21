@@ -30,7 +30,7 @@ class StateUnit(Unit, metaclass=abc.ABCMeta):
         self.fitted = True
 
     def reverse_transform(self, input_):
-        ...
+        raise NotImplementedError
 
     @property
     def context(self):
