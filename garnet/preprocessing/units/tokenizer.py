@@ -195,11 +195,11 @@ class BertTokenizer(BaseTokenizer):
         first_segment_ids = [0] * len(first_token_ids)
 
         if second_text is not None:
-            second_token_ids = self.tokenize(second_tokens)
+            second_token_ids = self.tokens2ids(second_tokens)
             if second_length is not None:
                 second_token_ids = second_token_ids[:second_length]
                 second_token_ids.extend([self.token2id(self._token_pad)] * (second_length - len(second_token_ids)))
-            second_segment_ids = [0] * len(second_token_ids)
+            second_segment_ids = [1] * len(second_token_ids)
 
             first_token_ids.extend(second_token_ids)
             first_segment_ids.extend(second_segment_ids)

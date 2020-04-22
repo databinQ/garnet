@@ -102,7 +102,7 @@ class Vocabulary(StateUnit):
     def read_txt(cls, file_path, encoding='utf-8', ignore_case=False):
         path = pathlib.Path(file_path)
         with codecs.open(path, 'r', encoding=encoding) as f:
-            tokens = [token.strip() for token in f.readlines() if token.strip()]
+            tokens = [token.strip() for token in f.readlines()]
             vocab = dict([(token, i) for i, token in enumerate(tokens)])
 
         instance = cls(ignore_case=ignore_case)
@@ -133,7 +133,7 @@ class BertVocabulary(Vocabulary):
 
     def fit(self, file_path):
         with codecs.open(file_path, 'r', encoding='utf-8') as f:
-            tokens = [token.strip() for token in f.readlines() if token.strip()]
+            tokens = [token.strip() for token in f.readlines()]
             self._vocab = dict([(token, i) for i, token in enumerate(tokens)])
             self._update_vocab_rev()
         super().fit(file_path)
