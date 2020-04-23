@@ -50,7 +50,7 @@ class DataPack(object):
         dp = dill.load(codecs.open(file_path, "rb"))
         return dp
 
-    def apply(self, func: typing.Callable, *args, **kwargs):
+    def apply(self, func: typing.Callable, verbose: int = 1, *args, **kwargs):
         raise NotImplementedError
 
 
@@ -100,6 +100,9 @@ class ClassifyDataPackMixin(object):
         return tuple(new_data) if isinstance(data, tuple) else new_data[0]
 
     def shuffle(self):
+        raise NotImplementedError
+
+    def __iter__(self):
         raise NotImplementedError
 
 
