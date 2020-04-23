@@ -132,9 +132,12 @@ class BertVocabulary(Vocabulary):
         self.fit(dict_path)
 
     def fit(self, file_path):
-        with codecs.open(file_path, 'r', encoding='utf-8') as f:
-            tokens = [token.strip() for token in f.readlines()]
-            self._vocab = dict([(token, i) for i, token in enumerate(tokens)])
+        with open(file_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                token = line.strip()
+                self._vocab[token] = len(self._vocab)
+            # self._vocab = dict([(token.strip(), i) for i, token in enumerate(f)])
+            # self._vocab = dict([(token, i) for i, token in enumerate(tokens)])
             self._update_vocab_rev()
-        super().fit(file_path)
+        self.fitted = True
         return self
