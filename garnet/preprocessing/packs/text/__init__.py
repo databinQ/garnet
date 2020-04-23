@@ -16,10 +16,10 @@ from ..constant import *
 class TextDataPack(DataPack):
     @staticmethod
     def apply_on_text(
-            data: pd.DataFrame,
+            data: typing.Optional[pd.DataFrame, list],
             func: typing.Callable,
             text_column: str = COLUMN_TEXT,
-            name: str = None,
+            name: typing.Optional[str] = None,
             verbose: int = 1,
             *args,
             **kwargs,
@@ -36,8 +36,14 @@ class TextDataPack(DataPack):
         """
         new_column = name or text_column
         if verbose:
-            tqdm.pandas(desc="Processing " + name + " with " + func.__name__)
-            data[new_column] = data[text_column].progress_apply(func, args=args, **kwargs)
+            if isinstance(data, pd.DataFrame):
+                tqdm.pandas(desc="Processing " + name + " with " + func.__name__)
+                data[new_column] = data[text_column].progress_apply(func, args=args, **kwargs)
+            else:
+                data = [func(sample) for sample in tqdm(data)]
         else:
-            data[new_column] = data[text_column].apply(func, args=args, **kwargs)
+            if isinstance(data, pd.DataFrame):
+                data[new_column] = data[text_column].apply(func, args=args, **kwargs)
+            else:
+                data = [func(sample) for sample in data]
         return data

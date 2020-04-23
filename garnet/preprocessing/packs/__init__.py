@@ -15,13 +15,10 @@ from pathlib import Path
 
 class DataPack(object):
     """
-    Train and test data are stored in `DataPack` object respectively, and in the of `pandas.DataFrame` in general.
-    `DataPack` also provides common processing methods, and specific method for specific data structure.
+    Train or test data are respectively stored in `DataPack` object. `DataPack` also provides common processing methods,
+    and specific method for specific data structure.
     """
     DATA_FILENAME = "data.dill"
-
-    def __init__(self, *args, **kwargs):
-        pass
 
     def feed_data(self, with_label=True):
         """

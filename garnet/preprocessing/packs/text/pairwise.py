@@ -61,5 +61,4 @@ class PairwiseTextDataPack(TextDataPack, ClassifyDataPackMixin):
     def unpack(self):
         left_X = self._relation.merge(self._left, on=COLUMN_TEXT_ID)[COLUMN_TEXT].tolist()
         right_X = self._relation.merge(self._right, on=COLUMN_TEXT_ID)[COLUMN_TEXT].tolist()
-        return (tuple(left_X), tuple(right_X)), \
-               self._relation[COLUMN_LABEL] if COLUMN_LABEL in self._relation.columns else None
+        return (left_X, right_X), self._relation[COLUMN_LABEL] if COLUMN_LABEL in self._relation.columns else None
