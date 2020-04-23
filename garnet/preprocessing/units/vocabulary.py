@@ -136,8 +136,6 @@ class BertVocabulary(Vocabulary):
             for line in f:
                 token = line.strip()
                 self._vocab[token] = len(self._vocab)
-            # self._vocab = dict([(token.strip(), i) for i, token in enumerate(f)])
-            # self._vocab = dict([(token, i) for i, token in enumerate(tokens)])
             self._update_vocab_rev()
         self.fitted = True
         return self
