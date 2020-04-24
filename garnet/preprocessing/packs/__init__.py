@@ -20,12 +20,6 @@ class DataPack(object):
     """
     DATA_FILENAME = "data.dill"
 
-    def feed_data(self, with_label=True):
-        """
-        Return data applied to train or test process.
-        """
-        raise NotImplementedError
-
     def save(self, directory_path: typing.Union[str, Path]):
         """
         Save the `DataPack` object to specified directory with fixed file name.

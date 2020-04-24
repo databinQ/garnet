@@ -8,11 +8,11 @@
 
 import typing
 
-from . import TextDataPack
-from .. import ClassifyDataPackMixin
+from .. import DataPack
+from ..mixin import TextMixin, ClassificationMixin
 
 
-class SpoDataPack(TextDataPack, ClassifyDataPackMixin):
+class SpoDataPack(ClassificationMixin, TextMixin, DataPack):
     def __init__(self, data, schema):
         """
         SPO means (subject, predicate, object) triples, which is usually the output of relation extraction or
