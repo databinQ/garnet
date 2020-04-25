@@ -19,14 +19,21 @@ class DataGenerator(keras.utils.Sequence):
         self.batch_size = batch_size
 
         self.data_pack = data_pack
-        self._X, self._y = self.data_pack.unpack()
+        self._X, self._y = None, None
 
-        self.step = len(data_pack) // self.batch_size + 1 if len(data_pack) % self.batch_size != 0 else 0
+        self.steps = None
         self._batch_indices = None
+
+    def initialize(self):
+        self.steps = self.cal_steps(len(self.data_pack))
+        self.unpack()
         self.reset_index()
 
+    def cal_steps(self, num_samples):
+        return num_samples // self.batch_size + 1 if num_samples % self.batch_size != 0 else 0
+
     def __len__(self):
-        return self.step
+        return self.steps
 
     def __getitem__(self, item):
         indices = self._batch_indices[item]
@@ -35,6 +42,10 @@ class DataGenerator(keras.utils.Sequence):
     def on_epoch_end(self):
         if self.shuffle:
             self.reset_index()
+
+    def unpack(self, *args, **kwargs):
+        assert hasattr(self.data_pack, 'unpack'), "Custom `DataPack` class must have `unpack` method"
+        self._X, self._y = self.data_pack.unpack()
 
     def make_chunk(self):
         """
@@ -48,12 +59,13 @@ class DataGenerator(keras.utils.Sequence):
             np.random.shuffle(indices)
 
         self._batch_indices = []
-        for i in range(self.step):
+        for i in range(self.steps):
             lower, upper = self.batch_size * i, self.batch_size * (i + 1)
             batch = indices[lower: upper]
             self._batch_indices.append(batch)
 
-    def _get_item(self, data, indices):
+    @staticmethod
+    def _get_item(data, indices):
         if data is None:
             return None
 
