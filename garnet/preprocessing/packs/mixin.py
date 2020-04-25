@@ -65,13 +65,6 @@ class ClassificationMixin(BaseMixin):
         """
         raise NotImplementedError
 
-    def __getitem__(self, item: int):
-        """
-        Similar role with `__iter__`, provides convenient usage for data generator inheriting
-        `keras.utils.Sequence`.
-        """
-        raise NotImplementedError
-
     def unpack(self):
         """
         Unpack the data for training.

@@ -44,6 +44,9 @@ class DataPack(object):
         dp = dill.load(codecs.open(file_path, "rb"))
         return dp
 
+    def __len__(self):
+        raise NotImplementedError
+
     def apply(self, func: typing.Callable, verbose: int = 1, *args, **kwargs):
         raise NotImplementedError
 

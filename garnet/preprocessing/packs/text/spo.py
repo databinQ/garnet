@@ -77,11 +77,17 @@ class SpoDataPack(ClassificationMixin, TextMixin, DataPack):
     def shuffle(self):
         self.data = self._shuffle(self.data)
 
+    def __len__(self):
+        return len(self.data)
+
     def __iter__(self):
-        ...
+        for sample in self.data:
+            yield sample.get('text'), sample.get('spo_list')
 
     def unpack(self):
-        ...
+        X, y = list(zip(*[(sample.get('text'), sample.get('spo_list')) for sample in self.data]))
+        y = None if None in y else y
+        return X, y
 
     def apply(self, func: typing.Callable, *args, **kwargs):
         new_texts = self.apply_on_text([sample['text'] for sample in self.data], func=func)
