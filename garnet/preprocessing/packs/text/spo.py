@@ -42,11 +42,11 @@ class SpoDataPack(ClassificationMixin, TextMixin, DataPack):
         for sample in data:
             spo_list = []
             for spo in sample['spo_list']:
-                subject, predicate, object = spo['subject'], spo['predicate'], spo['object']
-                if isinstance(object, str) or len(object) == 1:
-                    spo_list.append((subject, predicate, object))
-                elif isinstance(object, dict):
-                    for k, v in object.items():
+                subject, predicate, object_ = spo['subject'], spo['predicate'], spo['object']
+                if isinstance(object_, str):
+                    spo_list.append((subject, predicate, object_))
+                elif isinstance(object_, dict):
+                    for k, v in object_.items():
                         spo_list.append((subject, '|'.join([predicate, k]), v))
                 else:
                     raise ValueError("Object of SPO triple must be a `str` or `dict`")

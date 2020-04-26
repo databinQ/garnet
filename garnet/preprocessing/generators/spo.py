@@ -36,7 +36,7 @@ class SpoBertDataGenerator(DataGenerator):
     def initialize(self):
         assert hasattr(self.data_pack, 'unpack'), "Custom `DataPack` class must have `unpack` method"
         texts, spoes = self.data_pack.unpack()
-        max_length = self.data_pack.max_length
+        max_length = self._tokenizer.max_length
 
         total_token_ids, total_segment_ids, total_subject_labels, total_subject_ids, total_object_labels = \
             self.unpack(texts, spoes)
@@ -105,7 +105,7 @@ class SpoBertDataGenerator(DataGenerator):
                 If only positive samples exist, given a subject, there must be an object. So negative samples are fake
                 subject, thus they have no objects. 
                 """
-                start, end = np.array(sample_spoes.keys()).T
+                start, end = np.array(list(sample_spoes.keys())).T
                 start = np.random.choice(start)
                 end = np.random.choice(end[end >= start])
                 subject_ids = (start, end)
@@ -119,7 +119,7 @@ class SpoBertDataGenerator(DataGenerator):
 
                 total_token_ids.append(token_ids)
                 total_segment_ids.append(segment_ids)
-                total_subject_labels.append(subject_ids)
+                total_subject_labels.append(subject_labels)
                 total_subject_ids.append(subject_ids)
                 total_object_labels.append(object_labels)
 

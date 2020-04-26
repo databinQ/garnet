@@ -16,7 +16,7 @@ from ..constant import *
 class TextDataPack(DataPack):
     @staticmethod
     def apply_on_text(
-            data: typing.Optional[pd.DataFrame, list],
+            data: typing.Union[pd.DataFrame, list, None],
             func: typing.Callable,
             text_column: str = COLUMN_TEXT,
             name: typing.Optional[str] = None,

@@ -25,7 +25,7 @@ class PandasMixin(BaseMixin):
 class TextMixin(BaseMixin):
     @staticmethod
     def apply_on_text(
-            data: typing.Optional[pd.DataFrame, list],
+            data: typing.Union[pd.DataFrame, list],
             func: typing.Callable,
             text_column: str = COLUMN_TEXT,
             name: typing.Optional[str] = None,
@@ -90,7 +90,7 @@ class ClassificationMixin(BaseMixin):
         return False if self.y is None else True
 
     @staticmethod
-    def _shuffle(data: typing.Optional[list, tuple, np.ndarray, pd.DataFrame, pd.Series]):
+    def _shuffle(data: typing.Union[list, tuple, np.ndarray, pd.DataFrame, pd.Series, None]):
         if data is None:
             return data
 

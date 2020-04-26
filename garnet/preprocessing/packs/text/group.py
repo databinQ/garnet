@@ -20,7 +20,7 @@ class GroupTextDataPack(TextDataPack):
     def __init__(
             self,
             chunk_data: pd.DataFrame = None,
-            chunk_json: typing.Optional[dict, str] = None,
+            chunk_json: typing.Union[dict, str, None] = None,
             group_data: pd.DataFrame = None,
             text_data: pd.DataFrame = None,
             group_index_column=None,
@@ -173,7 +173,7 @@ class GroupTextDataPack(TextDataPack):
             self.gid_column = self.data_pack._group_index_column
             self.tid_column = COLUMN_TEXT_ID
 
-        def __getitem__(self, index: typing.Optional[int, list, tuple, np.array]):
+        def __getitem__(self, index: typing.Union[int, list, tuple, np.array, None]):
             if isinstance(index, int):
                 res = self.data_pack.text_data.loc[self.data_pack.text_data[self.tid_column] == index, self.gid_column]
                 return None if len(res) == 0 else res.iloc[0]
