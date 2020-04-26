@@ -11,6 +11,7 @@ import numpy as np
 from . import DataGenerator
 from ..packs.text.spo import SpoDataPack
 from ..units.tokenizer import BertTokenizer
+from ...utils.sequence import sequence_padding
 
 
 class SpoBertDataGenerator(DataGenerator):
@@ -26,17 +27,56 @@ class SpoBertDataGenerator(DataGenerator):
         self._tokenizer = tokenizer
         assert self._tokenizer.fitted is True, "Need a fitted Tokenizer"
 
+        self._total_token_ids = None
+        self._total_segment_ids = None
+        self._total_subject_labels = None
+        self._total_subject_ids = None
+        self._total_object_labels = None
+
     def initialize(self):
         assert hasattr(self.data_pack, 'unpack'), "Custom `DataPack` class must have `unpack` method"
         texts, spoes = self.data_pack.unpack()
-        self._X, self._y = self.unpack(texts, spoes)
-        self.cal_steps(len(self._X))
+        max_length = self.data_pack.max_length
+
+        total_token_ids, total_segment_ids, total_subject_labels, total_subject_ids, total_object_labels = \
+            self.unpack(texts, spoes)
+        max_length = max_length or max(len(x) for x in total_token_ids)
+
+        pos_padding, pos_truncate = 'post', 'pre'
+        self._total_token_ids = sequence_padding(
+            total_token_ids, max_length=max_length, padding=pos_padding, truncate=pos_truncate
+        )
+        self._total_segment_ids = sequence_padding(
+            total_segment_ids, max_length=max_length, padding=pos_padding, truncate=pos_truncate
+        )
+        self._total_subject_labels = sequence_padding(
+            total_subject_labels, max_length=max_length, padding=pos_padding, truncate=pos_truncate,
+            padding_index=np.zeros(2)
+        )
+        self._total_subject_ids = np.array(total_subject_ids)
+        self._total_object_labels = sequence_padding(
+            total_object_labels, max_length=max_length, padding=pos_padding, truncate=pos_truncate,
+            padding_index=np.zeros(2)
+        )
+
+        self.steps = self.cal_steps(len(self._total_token_ids))
         self.reset_index()
 
     def unpack(self, texts, spoes=None):
-        spoes = [None] * len(texts) if spoes is None else spoes
-        for text, spo in zip(texts, spoes):
+        spo_list = [None] * len(texts) if spoes is None else spoes
+
+        total_token_ids = []
+        total_segment_ids = []
+        total_subject_labels = []
+        total_subject_ids = []
+        total_object_labels = []
+
+        for text, spo in zip(texts, spo_list):
             token_ids, segment_ids = self._tokenizer.transform(text)
+            if spoes is None:
+                total_token_ids.append(token_ids)
+                total_segment_ids.append(segment_ids)
+                continue
 
             sample_spoes = dict()
             if spo is not None:
@@ -62,7 +102,7 @@ class SpoBertDataGenerator(DataGenerator):
 
                 """
                 Add negative samples.
-                If only positive samples exist, given a subject, there must be an object. So negative samples are wrong
+                If only positive samples exist, given a subject, there must be an object. So negative samples are fake
                 subject, thus they have no objects. 
                 """
                 start, end = np.array(sample_spoes.keys()).T
@@ -70,11 +110,20 @@ class SpoBertDataGenerator(DataGenerator):
                 end = np.random.choice(end[end >= start])
                 subject_ids = (start, end)
 
+                # get object corresponds with subject
+                # attention, subject can be fake, and object is empty in this case
+                object_labels = np.zeros(shape=(len(token_ids), len(self.data_pack.schema2id), 2))
+                for o in sample_spoes.get(subject_ids, []):
+                    object_labels[o[0], o[2], 0] = 1
+                    object_labels[o[1], o[2], 1] = 1
 
+                total_token_ids.append(token_ids)
+                total_segment_ids.append(segment_ids)
+                total_subject_labels.append(subject_ids)
+                total_subject_ids.append(subject_ids)
+                total_object_labels.append(object_labels)
 
-
-
-
+        return total_token_ids, total_segment_ids, total_subject_labels, total_subject_ids, total_object_labels
 
     @staticmethod
     def _search(pattern_ids, text_ids):
@@ -83,3 +132,18 @@ class SpoBertDataGenerator(DataGenerator):
             if text_ids[i: i + n] == pattern_ids:
                 return i
         return -1
+
+    def __getitem__(self, item):
+        indices = self._batch_indices[item]
+        return self._total_token_ids[indices], \
+               self._total_segment_ids[indices], \
+               self._total_subject_labels[indices], \
+               self._total_subject_ids[indices], \
+               self._total_object_labels[indices]
+
+    def make_chunk(self):
+        return self._total_token_ids, \
+               self._total_segment_ids, \
+               self._total_subject_labels, \
+               self._total_subject_ids, \
+               self._total_object_labels
