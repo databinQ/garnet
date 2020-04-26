@@ -56,7 +56,7 @@ class SpoBertDataGenerator(DataGenerator):
         self._total_subject_ids = np.array(total_subject_ids)
         self._total_object_labels = sequence_padding(
             total_object_labels, max_length=max_length, padding=pos_padding, truncate=pos_truncate,
-            padding_index=np.zeros(2)
+            padding_index=np.zeros(shape=(len(self.data_pack.schema2id), 2))
         )
 
         self.steps = self.cal_steps(len(self._total_token_ids))
