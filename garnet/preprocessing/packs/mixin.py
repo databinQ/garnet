@@ -59,12 +59,6 @@ class TextMixin(BaseMixin):
 
 
 class ClassificationMixin(BaseMixin):
-    def __iter__(self):
-        """
-        Make `DataPack` as a generator which producing batch data.
-        """
-        raise NotImplementedError
-
     def unpack(self):
         """
         Unpack the data for training.
@@ -78,16 +72,16 @@ class ClassificationMixin(BaseMixin):
         raise NotImplementedError
 
     @property
+    def with_label(self) -> bool:
+        raise NotImplementedError
+
+    @property
     def X(self):
         return self.unpack()[0]
 
     @property
     def y(self):
         return self.unpack()[1]
-
-    @property
-    def has_label(self) -> bool:
-        return False if self.y is None else True
 
     @staticmethod
     def _shuffle(data: typing.Union[list, tuple, np.ndarray, pd.DataFrame, pd.Series, None]):

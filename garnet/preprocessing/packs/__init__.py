@@ -8,8 +8,7 @@
 import dill
 import typing
 import codecs
-# import numpy as np
-# import pandas as pd
+import numpy as np
 from pathlib import Path
 
 
@@ -19,6 +18,18 @@ class DataPack(object):
     and specific method for specific data structure.
     """
     DATA_FILENAME = "data.dill"
+
+    def __len__(self):
+        raise NotImplementedError
+
+    def __iter__(self):
+        raise NotImplementedError
+
+    def __getitem__(self, index: typing.Union[int, slice, list, np.array]):
+        raise NotImplementedError
+
+    def apply(self, func: typing.Callable, verbose: int = 1, *args, **kwargs):
+        raise NotImplementedError
 
     def save(self, directory_path: typing.Union[str, Path]):
         """
@@ -43,12 +54,6 @@ class DataPack(object):
         file_path = directory_path.joinpath(cls.DATA_FILENAME)
         dp = dill.load(codecs.open(file_path, "rb"))
         return dp
-
-    def __len__(self):
-        raise NotImplementedError
-
-    def apply(self, func: typing.Callable, verbose: int = 1, *args, **kwargs):
-        raise NotImplementedError
 
 
 # class ClassifyDataPackMixin(object):
