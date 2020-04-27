@@ -64,7 +64,7 @@ class ClassificationMixin(BaseMixin):
         Unpack the data for training.
         The return value can be directly feed to `model.fit` or `model.fit_generator`.
 
-        :return: A tuple of (X, y). `y` is `None` if `self` has no label.
+        :return: A tuple of (X, y). `y` is `None` if data doesn't have label for test data.
         """
         raise NotImplementedError
 
@@ -81,7 +81,7 @@ class ClassificationMixin(BaseMixin):
 
     @property
     def y(self):
-        return self.unpack()[1]
+        return self.unpack()[1] if self.with_label else None
 
     @staticmethod
     def _shuffle(data: typing.Union[list, tuple, np.ndarray, pd.DataFrame, pd.Series, None]):
@@ -94,7 +94,9 @@ class ClassificationMixin(BaseMixin):
         packed_data = data if isinstance(data, tuple) else (data,)
         new_data = []
         for d in packed_data:
-            if isinstance(d, list):
+            if d is None:
+                new_d = None
+            elif isinstance(d, list):
                 new_d = [d[i] for i in random_index]
             elif isinstance(d, (pd.DataFrame, pd.Series)):
                 new_d = d.iloc[random_index]
