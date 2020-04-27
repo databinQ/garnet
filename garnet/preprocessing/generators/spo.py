@@ -37,10 +37,11 @@ class SpoBertDataGenerator(LazyDataGenerator):
         batch_object_labels = []
 
         for sample in self.sample():
-            text, spo = sample
+            self.transform(sample)
 
 
     def transform(self, data):
+        text, spo = data
         self._tokenizer.transform()
 
     def initialize(self):
