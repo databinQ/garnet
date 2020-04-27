@@ -89,7 +89,9 @@ class LazyDataGenerator(object):
                  data: typing.Union[DataPack, Iterable],
                  batch_size,
                  buffer_size=None,
-                 shuffle: bool = True):
+                 shuffle: bool = True,
+                 *args,
+                 **kwargs):
         self._data = data
         self.batch_size = batch_size
         self.num_per_epoch = len(self._data) if hasattr(data, '__len__') and hasattr(data, '__getitem__') else None
@@ -103,13 +105,16 @@ class LazyDataGenerator(object):
     def __iter__(self):
         batch_data = []
         for sample in self.sample():
-            batch_data.append(sample)
+            batch_data.append(self.transform(sample))
             if len(batch_data) == self.batch_size:
                 yield batch_data
                 batch_data = []
 
         if batch_data:
             yield batch_data
+
+    def transform(self, data):
+        return data
 
     def get_steps(self, num_samples):
         return num_samples // self.batch_size + 1 if num_samples % self.batch_size != 0 else 0

@@ -6,32 +6,42 @@
 @Time   : 2020/4/25 21:17
 """
 
+import typing
 import numpy as np
 
-from . import DataGenerator
+from . import LazyDataGenerator
 from ..packs.text.spo import SpoDataPack
 from ..units.tokenizer import BertTokenizer
 from ...utils.sequence import sequence_padding
 
 
-class SpoBertDataGenerator(DataGenerator):
+class SpoBertDataGenerator(LazyDataGenerator):
     def __init__(self,
                  data_pack: SpoDataPack,
                  tokenizer: BertTokenizer,
                  batch_size: int,
                  shuffle: bool = True,
+                 buffer_size: typing.Optional[int] = None,
                  *args,
                  **kwargs):
-        super().__init__(data_pack=data_pack, batch_size=batch_size, shuffle=shuffle)
+        super().__init__(data=data_pack, batch_size=batch_size, shuffle=shuffle, buffer_size=buffer_size)
 
+        assert tokenizer.fitted is True, "Need a fitted Tokenizer"
         self._tokenizer = tokenizer
-        assert self._tokenizer.fitted is True, "Need a fitted Tokenizer"
 
-        self._total_token_ids = None
-        self._total_segment_ids = None
-        self._total_subject_labels = None
-        self._total_subject_ids = None
-        self._total_object_labels = None
+    def __iter__(self):
+        batch_token_ids = []
+        batch_segment_ids = []
+        batch_subject_labels = []
+        batch_subject_ids = []
+        batch_object_labels = []
+
+        for sample in self.sample():
+            text, spo = sample
+
+
+    def transform(self, data):
+        self._tokenizer.transform()
 
     def initialize(self):
         assert hasattr(self.data_pack, 'unpack'), "Custom `DataPack` class must have `unpack` method"
@@ -132,14 +142,6 @@ class SpoBertDataGenerator(DataGenerator):
             if text_ids[i: i + n] == pattern_ids:
                 return i
         return -1
-
-    def __getitem__(self, item):
-        indices = self._batch_indices[item]
-        return self._total_token_ids[indices], \
-               self._total_segment_ids[indices], \
-               self._total_subject_labels[indices], \
-               self._total_subject_ids[indices], \
-               self._total_object_labels[indices]
 
     def make_chunk(self):
         return self._total_token_ids, \
