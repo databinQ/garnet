@@ -92,9 +92,9 @@ class LazyDataGenerator(object):
                  shuffle: bool = True,
                  *args,
                  **kwargs):
-        self._data = data
+        self.data_pack = data
         self.batch_size = batch_size
-        self.num_per_epoch = len(self._data) if hasattr(data, '__len__') and hasattr(data, '__getitem__') else None
+        self.num_per_epoch = len(self.data_pack) if hasattr(data, '__len__') and hasattr(data, '__getitem__') else None
         self.steps = self.get_steps(self.num_per_epoch) if self.num_per_epoch else None
         self.buffer_size = buffer_size or self.batch_size * 1000
         self.shuffle = shuffle
@@ -123,11 +123,11 @@ class LazyDataGenerator(object):
         indices = list(range(self.num_per_epoch))
         np.random.shuffle(indices)
         for i in indices:
-            yield self._data[i]
+            yield self.data_pack[i]
 
     def generator_unfixed_length(self):
         caches = []
-        for sample in self._data:
+        for sample in self.data_pack:
             caches.append(sample)
             if len(caches) == self.buffer_size:
                 index = np.random.randint(len(caches))
@@ -141,7 +141,7 @@ class LazyDataGenerator(object):
         if self.shuffle:
             generator = self.generator_fixed_length() if self.steps else self.generator_unfixed_length()
         else:
-            generator = iter(self._data)
+            generator = iter(self.data_pack)
 
         for s in generator:
             yield s
