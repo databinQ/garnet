@@ -107,6 +107,7 @@ venv.bak/
 .idea/
 
 # test and demo
+test/
 demo/
 test*.py
 demo*.py
