@@ -54,7 +54,7 @@ class SpoBertDataGenerator(LazyDataGenerator):
                 continue
 
             sample_spoes = dict()
-            if not self.data_pack.with_label:
+            if self.data_pack.with_label:
                 for s, p, o in spo:
                     s_token_ids = self._tokenizer.transform(s)[0][1:-1]
                     o_token_ids = self._tokenizer.transform(o)[0][1:-1]
