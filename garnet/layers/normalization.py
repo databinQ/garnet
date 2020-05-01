@@ -188,19 +188,19 @@ class CondLayerNormalization(keras.layers.Layer):
                 kernel_initializer=self.hidden_initializer,
             )
 
-            if self.center:
-                self.beta_dense = Dense(
-                    units=shape[0],
-                    use_bias=False,
-                    kernel_initializer='zeros',
-                )
+        if self.center:
+            self.beta_dense = Dense(
+                units=shape[0],
+                use_bias=False,
+                kernel_initializer='zeros',
+            )
 
-            if self.scale:
-                self.gamma_dense = Dense(
-                    units=shape[0],
-                    use_bias=False,
-                    kernel_initializer='zeros',
-                )
+        if self.scale:
+            self.gamma_dense = Dense(
+                units=shape[0],
+                use_bias=False,
+                kernel_initializer='zeros',
+            )
 
         super().build(input_shape)
 

@@ -7,3 +7,4 @@
 """
 
 from .keras_backend import sequence_masking
+from .keras_backend import batch_gather

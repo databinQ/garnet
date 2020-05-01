@@ -145,3 +145,13 @@ class LazyDataGenerator(object):
 
         for s in generator:
             yield s
+
+    def fit_iter(self):
+        """
+        Call this method to make a generator used for `fit_generator` method of keras model. Generator created by
+        this method will yield batch data endlessly.
+        Attention, `steps_per_epoch` parameter of `fit_generator` method must be specified as `len(self)`
+        """
+        while True:
+            for d in self.__iter__():
+                yield d

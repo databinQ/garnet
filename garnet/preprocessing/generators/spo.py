@@ -146,8 +146,7 @@ class SpoBertDataGenerator(LazyDataGenerator):
             truncate=self.pos_truncate,
             padding_index=np.zeros(shape=(len(self.data_pack.schema2id), 2))
         )
-        return batch_token_ids, batch_segment_ids, \
-               batch_subject_labels, batch_subject_ids, batch_object_labels
+        return [batch_token_ids, batch_segment_ids, batch_subject_labels, batch_subject_ids, batch_object_labels], None
 
     def gen_test_batch(self, batch_token_ids, batch_segment_ids):
         batch_token_ids = sequence_padding(
@@ -162,7 +161,7 @@ class SpoBertDataGenerator(LazyDataGenerator):
             padding=self.pos_padding,
             truncate=self.pos_truncate
         )
-        return batch_token_ids, batch_segment_ids, None, None, None
+        return [batch_token_ids, batch_segment_ids]
 
     @staticmethod
     def _search(pattern_ids, text_ids):

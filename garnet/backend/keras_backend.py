@@ -6,6 +6,7 @@
 @Time   : 2020/4/13 16:08
 """
 
+import tensorflow as tf
 import keras.backend as K
 
 
@@ -31,3 +32,7 @@ def sequence_masking(x, mask, mode='mul', axis=1):
         return x * mask
     else:
         return x - (1 - mask) * 1e12
+
+
+def batch_gather(params, indices):
+    return tf.gather(params, indices, batch_dims=-1)
