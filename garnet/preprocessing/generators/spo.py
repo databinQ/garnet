@@ -37,7 +37,7 @@ class SpoBertDataGenerator(LazyDataGenerator):
         batch_subject_ids = []
         batch_object_labels = []
 
-        for sample in self.sample():
+        for i, sample in enumerate(self.sample()):
             text, spo = sample
 
             token_ids, segment_ids = self._tokenizer.transform(text)
@@ -54,7 +54,7 @@ class SpoBertDataGenerator(LazyDataGenerator):
                 continue
 
             sample_spoes = dict()
-            if spo is not None:
+            if not self.data_pack.with_label:
                 for s, p, o in spo:
                     s_token_ids = self._tokenizer.transform(s)[0][1:-1]
                     o_token_ids = self._tokenizer.transform(o)[0][1:-1]
