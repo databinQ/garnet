@@ -115,3 +115,7 @@ class SpoDataPack(ClassificationMixin, TextMixin, DataPack):
                     flatten2complex[new_predicate] = (predicate, sub_p)
         id2schema = {v: k for k, v in schema2id.items()}
         return schema2id, id2schema, flatten2complex
+
+    @property
+    def num_predicate(self):
+        return len(self.schema2id)

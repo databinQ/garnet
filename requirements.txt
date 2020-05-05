@@ -1,3 +1,4 @@
+pyahocorasick
 dill
 h5py
 Keras
