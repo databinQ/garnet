@@ -44,8 +44,22 @@ class SpoBertDataGenerator(LazyDataGenerator):
 
         for i, sample in enumerate(self.sample()):
             text, spo = sample
-
             token_ids, segment_ids = self._tokenizer.transform(text)
+
+            prior_spoes = dict()
+            if self._searcher is not None:
+                for prior_spo in self._searcher.extract(text, spo_list=spo):
+                    prior_s, prior_p, prior_o = prior_spo
+                    pid = self.data_pack.schema2id[prior_p]
+                    s_idx, s_len = self._search_start_index(prior_s, token_ids)
+                    o_idx, o_len = self._search_start_index(prior_o, token_ids)
+                    if s_idx != -1 and o_idx != -1:
+                        s_key = (s_idx, s_idx + s_len - 1)
+                        o_key = (o_idx, o_idx + o_len - 1, pid)
+                        if s_key not in prior_spoes:
+                            prior_spoes[s_key] = []
+                        prior_spoes[s_key].append(o_key)
+
             if not self.data_pack.with_label:
                 # test data
                 batch_token_ids.append(token_ids)
@@ -71,19 +85,7 @@ class SpoBertDataGenerator(LazyDataGenerator):
                             sample_spoes[s] = []
                         sample_spoes[s].append(o)
 
-            prior_spoes = dict()
-            if self._searcher is not None:
-                for prior_spo in self._searcher.extract(text, spo_list=spo):
-                    prior_s, prior_p, prior_o = prior_spo
-                    pid = self.data_pack.schema2id[prior_p]
-                    s_idx, s_len = self._search_start_index(prior_s, token_ids)
-                    o_idx, o_len = self._search_start_index(prior_o, token_ids)
-                    if s_idx != -1 and o_idx != -1:
-                        s_key = (s_idx, s_idx + s_len - 1)
-                        o_key = (o_idx, o_idx + o_len - 1, pid)
-                        if s_key not in prior_spoes:
-                            prior_spoes[s_key] = []
-                        prior_spoes[s_key].append(o_key)
+
 
             if sample_spoes:
                 subject_labels = np.zeros(shape=(len(token_ids), 2))  # (seq_len, 2)
