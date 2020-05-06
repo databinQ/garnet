@@ -115,3 +115,15 @@ class SpoDataPack(ClassificationMixin, TextMixin, DataPack):
                     flatten2complex[new_predicate] = (predicate, sub_p)
         id2schema = {v: k for k, v in schema2id.items()}
         return schema2id, id2schema, flatten2complex
+
+    @staticmethod
+    def schema_restore(spoes):
+        spo_map = dict()
+        for s, p, o in spoes:
+            p1, p2 = spoes.split('|')
+            sp1 = (s, p1)
+            if sp1 in spo_map:
+                spo_map[sp1][p2] = o
+            else:
+                spo_map[sp1] = {p2: o}
+        return [(k[0], k[1], v) for k, v in spo_map.items()]
