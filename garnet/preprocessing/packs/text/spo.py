@@ -116,6 +116,10 @@ class SpoDataPack(ClassificationMixin, TextMixin, DataPack):
         id2schema = {v: k for k, v in schema2id.items()}
         return schema2id, id2schema, flatten2complex
 
+    @property
+    def num_predicate(self):
+        return len(self.schema2id)
+
     @staticmethod
     def schema_restore(spoes):
         spo_map = dict()

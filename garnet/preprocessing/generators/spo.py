@@ -12,6 +12,7 @@ import numpy as np
 from . import LazyDataGenerator
 from ..packs.text.spo import SpoDataPack
 from ..units.tokenizer import BertTokenizer
+from ..units.task.spo import SpoSearcher
 from ...utils.sequence import sequence_padding
 
 
@@ -20,6 +21,7 @@ class SpoBertDataGenerator(LazyDataGenerator):
                  data_pack: SpoDataPack,
                  tokenizer: BertTokenizer,
                  batch_size: int,
+                 searcher: SpoSearcher = None,
                  shuffle: bool = True,
                  buffer_size: typing.Optional[int] = None,
                  *args,
@@ -28,6 +30,7 @@ class SpoBertDataGenerator(LazyDataGenerator):
 
         assert tokenizer.fitted is True, "Need a fitted Tokenizer"
         self._tokenizer = tokenizer
+        self._searcher = searcher
         self.pos_padding, self.pos_truncate = 'post', 'pre'
 
     def __iter__(self):
@@ -36,11 +39,27 @@ class SpoBertDataGenerator(LazyDataGenerator):
         batch_subject_labels = []
         batch_subject_ids = []
         batch_object_labels = []
+        batch_other_subjects = []
+        batch_other_objects = []
 
         for i, sample in enumerate(self.sample()):
             text, spo = sample
-
             token_ids, segment_ids = self._tokenizer.transform(text)
+
+            prior_spoes = dict()
+            if self._searcher is not None:
+                for prior_spo in self._searcher.extract(text, spo_list=spo):
+                    prior_s, prior_p, prior_o = prior_spo
+                    pid = self.data_pack.schema2id[prior_p]
+                    s_idx, s_len = self._search_start_index(prior_s, token_ids)
+                    o_idx, o_len = self._search_start_index(prior_o, token_ids)
+                    if s_idx != -1 and o_idx != -1:
+                        s_key = (s_idx, s_idx + s_len - 1)
+                        o_key = (o_idx, o_idx + o_len - 1, pid)
+                        if s_key not in prior_spoes:
+                            prior_spoes[s_key] = []
+                        prior_spoes[s_key].append(o_key)
+
             if not self.data_pack.with_label:
                 # test data
                 batch_token_ids.append(token_ids)
@@ -56,18 +75,17 @@ class SpoBertDataGenerator(LazyDataGenerator):
             sample_spoes = dict()
             if self.data_pack.with_label:
                 for s, p, o in spo:
-                    s_token_ids = self._tokenizer.transform(s)[0][1:-1]
-                    o_token_ids = self._tokenizer.transform(o)[0][1:-1]
                     pid = self.data_pack.schema2id[p]
-
-                    s_idx = self._search(s_token_ids, token_ids)
-                    o_idx = self._search(o_token_ids, token_ids)
+                    s_idx, s_len = self._search_start_index(s, token_ids)
+                    o_idx, o_len = self._search_start_index(o, token_ids)
                     if s_idx != -1 and o_idx != -1:
-                        s = (s_idx, s_idx + len(s_token_ids) - 1)
-                        o = (o_idx, o_idx + len(o_token_ids) - 1, pid)
+                        s = (s_idx, s_idx + s_len - 1)
+                        o = (o_idx, o_idx + o_len - 1, pid)
                         if s not in sample_spoes:
                             sample_spoes[s] = []
                         sample_spoes[s].append(o)
+
+
 
             if sample_spoes:
                 subject_labels = np.zeros(shape=(len(token_ids), 2))  # (seq_len, 2)
@@ -87,29 +105,48 @@ class SpoBertDataGenerator(LazyDataGenerator):
 
                 # get object corresponds with subject
                 # attention, subject can be fake, and object is empty in this case
-                object_labels = np.zeros(shape=(len(token_ids), len(self.data_pack.schema2id), 2))
+                object_labels = np.zeros(shape=(len(token_ids), self.data_pack.num_predicate, 2))
                 for o in sample_spoes.get(subject_ids, []):
                     object_labels[o[0], o[2], 0] = 1
                     object_labels[o[1], o[2], 1] = 1
+
+                if self._searcher is not None:
+                    prior_subjects_ids = np.zeros(shape=(len(token_ids), 2))
+                    prior_objects_ids = np.zeros(shape=(len(token_ids), self.data_pack.num_predicate, 2))
+                    if prior_spoes:
+                        s_start_ids, s_end_ids = list(zip(*prior_spoes.keys()))
+                        prior_subjects_ids[s_start_ids, 0] = 1
+                        prior_subjects_ids[s_end_ids, 1] = 1
+                    for o in prior_spoes.get(subject_ids, []):
+                        prior_objects_ids[o[0], o[2], 0] = 1
+                        prior_objects_ids[o[1], o[2], 1] = 1
+                    prior_objects_ids = prior_objects_ids.reshape((len(token_ids), -1))
 
                 batch_token_ids.append(token_ids)
                 batch_segment_ids.append(segment_ids)
                 batch_subject_labels.append(subject_labels)
                 batch_subject_ids.append(subject_ids)
                 batch_object_labels.append(object_labels)
+                if self._searcher is not None:
+                    batch_other_subjects.append(prior_subjects_ids)
+                    batch_other_objects.append(prior_objects_ids)
 
                 if len(batch_token_ids) == self.batch_size:
                     yield self.gen_train_batch(batch_token_ids, batch_segment_ids,
-                                               batch_subject_labels, batch_subject_ids, batch_object_labels)
+                                               batch_subject_labels, batch_subject_ids, batch_object_labels,
+                                               batch_other_subjects, batch_other_objects)
                     batch_token_ids = []
                     batch_segment_ids = []
                     batch_subject_labels = []
                     batch_subject_ids = []
                     batch_object_labels = []
+                    batch_other_subjects = []
+                    batch_other_objects = []
         if len(batch_token_ids) != 0:
             if self.data_pack.with_label:
                 yield self.gen_train_batch(batch_token_ids, batch_segment_ids,
-                                           batch_subject_labels, batch_subject_ids, batch_object_labels)
+                                           batch_subject_labels, batch_subject_ids, batch_object_labels,
+                                           batch_other_subjects, batch_other_objects)
             else:
                 yield self.gen_test_batch(batch_token_ids, batch_segment_ids)
 
@@ -118,7 +155,9 @@ class SpoBertDataGenerator(LazyDataGenerator):
                         batch_segment_ids,
                         batch_subject_labels,
                         batch_subject_ids,
-                        batch_object_labels):
+                        batch_object_labels,
+                        batch_other_subjects,
+                        batch_other_objects):
         batch_token_ids = sequence_padding(
             batch_token_ids,
             max_length=self._tokenizer.max_length,
@@ -144,9 +183,39 @@ class SpoBertDataGenerator(LazyDataGenerator):
             max_length=self._tokenizer.max_length,
             padding=self.pos_padding,
             truncate=self.pos_truncate,
-            padding_index=np.zeros(shape=(len(self.data_pack.schema2id), 2))
+            padding_index=np.zeros(shape=(self.data_pack.num_predicate, 2))
         )
-        return [batch_token_ids, batch_segment_ids, batch_subject_labels, batch_subject_ids, batch_object_labels], None
+
+        if len(batch_other_subjects) != 0 and len(batch_other_objects) != 0:
+            batch_other_subjects = sequence_padding(
+                batch_other_subjects,
+                max_length=self._tokenizer.max_length,
+                padding=self.pos_padding,
+                truncate=self.pos_truncate,
+                padding_index=np.zeros(2)
+            )
+            batch_other_objects = sequence_padding(
+                batch_other_objects,
+                max_length=self._tokenizer.max_length,
+                padding=self.pos_padding,
+                truncate=self.pos_truncate,
+                padding_index=np.zeros(shape=(self.data_pack.num_predicate * 2))
+            )
+            return [batch_token_ids,
+                    batch_segment_ids,
+                    batch_subject_labels,
+                    batch_subject_ids,
+                    batch_object_labels,
+                    batch_other_subjects,
+                    batch_other_objects], \
+                   None
+        else:
+            return [batch_token_ids,
+                    batch_segment_ids,
+                    batch_subject_labels,
+                    batch_subject_ids,
+                    batch_object_labels], \
+                   None
 
     def gen_test_batch(self, batch_token_ids, batch_segment_ids):
         batch_token_ids = sequence_padding(
@@ -170,3 +239,11 @@ class SpoBertDataGenerator(LazyDataGenerator):
             if text_ids[i: i + n] == pattern_ids:
                 return i
         return -1
+
+    def _search_start_index(self, token, text_token_ids):
+        """
+        :param token: token string
+        :param text_token_ids: list containing each token index of text
+        """
+        token_ids = self._tokenizer.transform(token)[0][1:-1]
+        return self._search(token_ids, text_token_ids), len(token_ids)
