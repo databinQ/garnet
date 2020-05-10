@@ -85,8 +85,6 @@ class SpoBertDataGenerator(LazyDataGenerator):
                             sample_spoes[s] = []
                         sample_spoes[s].append(o)
 
-
-
             if sample_spoes:
                 subject_labels = np.zeros(shape=(len(token_ids), 2))  # (seq_len, 2)
                 s_start_ids, s_end_ids = list(zip(*sample_spoes.keys()))
