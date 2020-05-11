@@ -171,3 +171,8 @@ class SpoPointEvaluator(Evaluator):
 
         def __repr__(self):
             return self.__str__()
+
+
+class SpoPointPriorEvaluator(SpoPointEvaluator):
+    def extract_spoes(self, text):
+        pass
