@@ -117,7 +117,9 @@ class LazyDataGenerator(object):
         return data
 
     def get_steps(self, num_samples):
-        return num_samples // self.batch_size + 1 if num_samples % self.batch_size != 0 else 0
+        steps = num_samples // self.batch_size
+        steps += 1 if num_samples % self.batch_size != 0 else 0
+        return steps
 
     def generator_fixed_length(self):
         indices = list(range(self.num_per_epoch))

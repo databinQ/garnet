@@ -25,8 +25,9 @@ class SpoPointEvaluator(Evaluator):
                  threshold_sub_end=0.5,
                  threshold_obj_start=0.5,
                  threshold_obj_end=0.5,
+                 save_path=None,
                  polarity='upper'):
-        super().__init__(polarity=polarity)
+        super().__init__(save_path=save_path, polarity=polarity)
         self._subject_model = subject_model
         self._object_model = object_model
         self._dev_data = dev_data
@@ -38,11 +39,37 @@ class SpoPointEvaluator(Evaluator):
         self._threshold_obj_end = threshold_obj_end
 
     def on_epoch_end(self, epoch, logs=None):
-        X, Y, Z = 1e-10, 1e-10, 1e-10
+        tp, pcp, cp = 1e-10, 1e-10, 1e-10
 
         pbar = tqdm()
         for sample in self._dev_data:
-            pass
+            text, spo_list = sample
+
+            predict_spoes = self.extract(text, mode='object')
+            real_spoes = self._schema_restore(spo_list)
+            p_set = set(predict_spoes)
+            r_set = set(real_spoes)
+
+            tp += len(p_set & r_set)
+            pcp += len(p_set)
+            cp += len(r_set)
+            f1, precision, recall = 2 * tp / (pcp + cp), tp / pcp, tp / cp
+
+            pbar.update()
+            pbar.set_description("f1: {:.4f}, precision: {:.4f}, recall: {:.4f}".format(f1, precision, recall))
+
+        pbar.close()
+
+        if self.better(f1):
+            self.update_metric(f1)
+            self.save_model()
+
+        print('f1: {:.4f}, precision: {:.4f}, recall: {:.4f}, best f1: {:.4f}\n'.format(
+            f1,
+            precision,
+            recall,
+            self.best_metric_value
+        ))
 
     def _schema_restore(self, spo_list):
         spo_map = dict()
