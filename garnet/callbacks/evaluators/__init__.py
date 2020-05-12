@@ -36,7 +36,7 @@ class Evaluator(keras.callbacks.Callback):
 
     def save_model(self):
         if self._save_path is not None:
-            self.model.save_weight(self._save_path.joinpath('best.weights'))
+            self.model.save_weights(self._save_path.joinpath('best.weights'))
         else:
             raise ValueError("A directory must be assigned before saving model weights")
 
