@@ -86,7 +86,7 @@ class SpoPointEvaluator(Evaluator):
         mapping = self._tokenizer.rematch(text, tokens)
         token_ids, segment_ids = self._tokenizer.transform(text)
 
-        subject_preds = self._subject_model.predict([token_ids, segment_ids])
+        subject_preds = self._subject_model.predict([[token_ids], [segment_ids]])
         start = np.where(subject_preds[0, :, 0] > self._threshold_sub_start)[0]  # index of the start token of subject
         end = np.where(subject_preds[0, :, 1] > self._threshold_sub_end)[0]
 
