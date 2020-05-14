@@ -241,7 +241,7 @@ class SpoBertDataGenerator(LazyDataGenerator):
     def _search_start_index(self, token, text_token_ids):
         """
         :param token: token string
-        :param text_token_ids: list containing each token index of text
+        :param text_token_ids: list containing each text token index
         """
         token_ids = self._tokenizer.transform(token)[0][1:-1]
         return self._search(token_ids, text_token_ids), len(token_ids)
