@@ -223,15 +223,21 @@ class SpoPointPriorEvaluator(SpoPointEvaluator):
 
         subject_preds = self._subject_model.predict([[token_ids], [segment_ids], [prior_subjects_ids]])
 
+        # get subjects
         start = np.where(subject_preds[0, :, 0] > self._threshold_sub_start)[0]  # index of the start token of subject
         end = np.where(subject_preds[0, :, 1] > self._threshold_sub_end)[0]
-
-        # get subjects
-        subjects = []
+        subjects, prior_objs = [], []
         for i in start:
             j = end[end > i]
             if len(j) > 0:
-                subjects.append((i, j[0]))
+                sub = (i, j[0])
+                subjects.append(sub)
+                pri_obj = np.zeros(shape=(len(token_ids), self._dev_data.num_predicate, 2))
+                for o in prior_spoes.get(sub, []):
+                    pri_obj[o[0], o[2], 0] = 1
+                    pri_obj[o[1], o[2], 0] = 1
+                pri_obj = pri_obj.reshape((len(token_ids), -1))
+                prior_objs.append(pri_obj)
 
         if subjects:
             spoes = []
@@ -240,8 +246,9 @@ class SpoPointPriorEvaluator(SpoPointEvaluator):
             token_ids = np.repeat([token_ids], repeats=num_subjects, axis=0)
             segment_ids = np.repeat([segment_ids], repeats=num_subjects, axis=0)
             subjects = np.array(subjects)
+            prior_object_ids = np.array(prior_objs)
 
-            object_preds = self._object_model.predict([token_ids, segment_ids, subjects])
+            object_preds = self._object_model.predict([token_ids, segment_ids, subjects, prior_object_ids])
 
             for subject, object_pred in zip(subjects, object_preds):
                 sub_start, sub_end = subject
