@@ -223,10 +223,9 @@ class SpoPointPriorEvaluator(SpoPointEvaluator):
 
         subject_preds = self._subject_model.predict([[token_ids], [segment_ids], [prior_subjects_ids]])
 
+        # get subjects
         start = np.where(subject_preds[0, :, 0] > self._threshold_sub_start)[0]  # index of the start token of subject
         end = np.where(subject_preds[0, :, 1] > self._threshold_sub_end)[0]
-
-        # get subjects
         subjects = []
         for i in start:
             j = end[end > i]
