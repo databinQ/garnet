@@ -48,7 +48,7 @@ class SpoBertDataGenerator(LazyDataGenerator):
 
             prior_spoes = dict()
             if self._searcher is not None:
-                for prior_spo in self._searcher.extract(text, spo_list=spo):
+                for prior_spo in self._searcher.extract(text, excludes=spo):
                     prior_s, prior_p, prior_o = prior_spo
                     pid = self.data_pack.schema2id[prior_p]
                     s_idx, s_len = self._search_start_index(prior_s, token_ids)

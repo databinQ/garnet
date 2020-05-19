@@ -41,7 +41,7 @@ class SpoSearcher(StateUnit):
 
         super().fit(train_data)
 
-    def extract(self, text, spo_list=None):
+    def extract(self, text, excludes=None):
         result = set()
         for s in self.s_ac.iter(text):
             s = s[1]
@@ -51,11 +51,11 @@ class SpoSearcher(StateUnit):
                 if so in self.so2p:
                     for p in self.so2p[so]:
                         spo = (s, p, o)
-                        if spo_list is None:
+                        if excludes is None:
                             result.add(spo)
-                        elif spo not in spo_list:
+                        elif spo not in excludes:
                             result.add(spo)
         return list(result)
 
-    def transform(self, input_, spo_list=None):
-        return self.extract(input_, spo_list=spo_list)
+    def transform(self, input_, excludes=None):
+        return self.extract(input_, excludes=excludes)
