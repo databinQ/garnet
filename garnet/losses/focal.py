@@ -67,7 +67,9 @@ def categorical_focal_loss(gamma=2., alpha=.25):
         """
         :param y_true: A tensor of the same shape as `y_pred`
         :param y_pred: A tensor resulting from a softmax
-        :return: Output tensor.
+        :return: A `Tensor` that contains the softmax cross entropy loss. Its type is the
+          same as `y_pred` and its shape is the same as `y_true` except that it does
+          not have the last dimension of `labels`.
         """
 
         if isinstance(alpha, (int, float)):
@@ -93,6 +95,6 @@ def categorical_focal_loss(gamma=2., alpha=.25):
         loss = _alpha * K.pow(1 - y_pred, gamma) * cross_entropy
 
         # Compute mean loss in mini_batch
-        return K.mean(loss, axis=1)
+        return K.mean(loss, axis=-1)
 
     return categorical_focal_loss_fixed
