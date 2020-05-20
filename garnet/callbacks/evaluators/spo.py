@@ -94,7 +94,7 @@ class SpoPointEvaluator(Evaluator):
         # get subjects
         subjects = []
         for i in start:
-            j = end[end > i]
+            j = end[end >= i]
             if len(j) > 0:
                 subjects.append((i, j[0]))
 
@@ -115,7 +115,7 @@ class SpoPointEvaluator(Evaluator):
 
                 for start_idx, p_idx1 in zip(*start):
                     for end_idx, p_idx2 in zip(*end):
-                        if p_idx1 == p_idx2 and start_idx <= end_idx:
+                        if p_idx1 == p_idx2 and 0 < start_idx <= end_idx:
                             spoes.append((
                                 (mapping[sub_start][0], mapping[sub_end][-1]),
                                 p_idx1,
@@ -228,7 +228,7 @@ class SpoPointPriorEvaluator(SpoPointEvaluator):
         end = np.where(subject_preds[0, :, 1] > self._threshold_sub_end)[0]
         subjects, prior_objs = [], []
         for i in start:
-            j = end[end > i]
+            j = end[end >= i]
             if len(j) > 0:
                 sub = (i, j[0])
                 subjects.append(sub)
@@ -257,7 +257,7 @@ class SpoPointPriorEvaluator(SpoPointEvaluator):
 
                 for start_idx, p_idx1 in zip(*start):
                     for end_idx, p_idx2 in zip(*end):
-                        if p_idx1 == p_idx2 and start_idx <= end_idx:
+                        if p_idx1 == p_idx2 and 0 < start_idx <= end_idx:
                             spoes.append((
                                 (mapping[sub_start][0], mapping[sub_end][-1]),
                                 p_idx1,
