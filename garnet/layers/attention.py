@@ -31,7 +31,7 @@ class MultiHeadAttention(keras.layers.Layer):
         :param key_size: Size of query and key vector, which is used when the length of key vector and value vector
             are different. See [Low-Rank Bottleneck in Multi-head Attention Models](https://arxiv.org/abs/2002.07028)
             for more information.
-        :param kernel_initializer: Regularizer for the projection weight
+        :param kernel_initializer: Regularizer of the projection matrix weight
         :param use_bias: Whether use bias term
         """
         super(MultiHeadAttention, self).__init__(**kwargs)
@@ -56,7 +56,7 @@ class MultiHeadAttention(keras.layers.Layer):
             kernel_initializer=self.kernel_initializer,
         )
         self.v_dense = keras.layers.Dense(
-            units=self.num_heads * self.head_size,
+            units=self.out_dim,
             use_bias=self.use_bias,
             kernel_initializer=self.kernel_initializer,
         )
@@ -98,7 +98,7 @@ class MultiHeadAttention(keras.layers.Layer):
         kw = K.reshape(kw,
                        (-1, K.shape(k)[1], self.num_heads, self.key_size))  # (batch_size, key_len, num_heads, key_size)
         vw = K.reshape(vw, (
-            -1, K.shape(v)[1], self.num_heads, self.key_size))  # (batch_size, key_len, num_heads, head_size)
+            -1, K.shape(v)[1], self.num_heads, self.head_size))  # (batch_size, key_len, num_heads, head_size)
 
         # Attention score(scale-dot method)
         a = tf.einsum('bjhd,bkhd->bhjk', qw, kw)  # (batch_size, num_heads, query_len, key_len)
