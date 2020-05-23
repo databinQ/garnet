@@ -16,6 +16,43 @@ from ...preprocessing.units.tokenizer import BertTokenizer
 from ...preprocessing.units.task.spo import SpoSearcher
 
 
+class SPOTriple(tuple):
+    """
+    Class to store single spo triple. Overwrite `__hash__` and `__eq__` method, to satisfy robust spo triple comparison
+    """
+
+    def __init__(self, spo):
+        self.spox = (
+            spo[0],
+            spo[1],
+            tuple(sorted([(k, v) for k, v in spo[2].items()])),
+        )
+        self._spo_raw = spo
+
+    def __hash__(self):
+        return self.spox.__hash__()
+
+    def __eq__(self, spo):
+        return self.spox == spo.spox
+
+    @property
+    def spo(self):
+        return self._spo_raw
+
+    def to_dict(self):
+        return {
+            'subject': self._spo_raw[0],
+            'predicate': self._spo_raw[1],
+            'object': self._spo_raw[2]
+        }
+
+    def __str__(self):
+        return '{}'.format(self.to_dict())
+
+    def __repr__(self):
+        return self.__str__()
+
+
 class SpoPointEvaluator(Evaluator):
     def __init__(self,
                  subject_model: Model,

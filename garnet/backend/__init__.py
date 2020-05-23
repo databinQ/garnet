@@ -7,4 +7,8 @@
 """
 
 from .keras_backend import sequence_masking
+from .keras_backend import sequence_extract
+from .keras_backend import sequence_extract_mean
+
 from .keras_backend import batch_gather
+from .keras_backend import batch_range
