@@ -258,6 +258,11 @@ class BertTokenizer(BaseTokenizer):
 
         return token_mapping
 
+    def match_tokenize(self, text, max_length=None):
+        token = self.tokenize(text, max_length=max_length)
+        mapping = self.rematch(text, token)
+        return token, mapping
+
     @staticmethod
     def _is_special(token):
         return bool(token) and (token[0] == '[') and (token[-1] == ']')

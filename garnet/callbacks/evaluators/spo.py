@@ -16,34 +16,36 @@ from ...preprocessing.units.tokenizer import BertTokenizer
 from ...preprocessing.units.task.spo import SpoSearcher
 
 
-class SPOTriple(tuple):
+class SPOTriplet(object):
     """
-    Class to store single spo triple. Overwrite `__hash__` and `__eq__` method, to satisfy robust spo triple comparison
+    Store simple spo triplet. Overwrite `__hash__` and `__eq__` method, to satisfy robust spo triple comparison
     """
 
-    def __init__(self, spo):
-        self.spox = (
-            spo[0],
-            spo[1],
-            tuple(sorted([(k, v) for k, v in spo[2].items()])),
-        )
-        self._spo_raw = spo
+    def __init__(self, subject, predicate, object_):
+        """
+        `subject`, `predicate` and `object_` are all strings
+        """
+        self.spo = (subject, predicate, object_)
+        # self.spox = (
+        #     spo[0],
+        #     spo[1],
+        #     tuple(sorted([(k, v) for k, v in spo[2].items()])),
+        # )
 
     def __hash__(self):
-        return self.spox.__hash__()
+        return self.spo.__hash__()
 
     def __eq__(self, spo):
-        return self.spox == spo.spox
+        return self.spo == spo.spo
 
-    @property
-    def spo(self):
-        return self._spo_raw
+    def to_triplet(self):
+        return self.spo
 
     def to_dict(self):
         return {
-            'subject': self._spo_raw[0],
-            'predicate': self._spo_raw[1],
-            'object': self._spo_raw[2]
+            'subject': self.spo[0],
+            'predicate': self.spo[1],
+            'object': self.spo[2]
         }
 
     def __str__(self):
@@ -51,6 +53,37 @@ class SPOTriple(tuple):
 
     def __repr__(self):
         return self.__str__()
+
+
+class SPOComplexTriplet(SPOTriplet):
+    """
+    Spo triplet with complex object should be stored in this class
+    """
+
+    def __init__(self, subject, predicate, complex_object: dict):
+        self.spo = (
+            subject,
+            predicate,
+            tuple(sorted([(k, v) for k, v in complex_object.items()])),
+        )
+
+    @staticmethod
+    def obj2tuple(dict_obj):
+        return tuple(sorted([(k, v) for k, v in dict_obj.items()]))
+
+    @staticmethod
+    def obj2dict(tuple_obj):
+        return {k: v for k, v in tuple_obj}
+
+    def to_triplet(self):
+        return self.spo[0], self.spo[1], self.obj2dict(self.spo[2])
+
+    def to_dict(self):
+        return {
+            'subject': self.spo[0],
+            'predicate': self.spo[1],
+            'object': self.obj2dict(self.spo[2])
+        }
 
 
 class SpoPointEvaluator(Evaluator):
@@ -119,21 +152,85 @@ class SpoPointEvaluator(Evaluator):
             spo_map[sp1][p2] = o
         return list(set([self.SPO((k[0], k[1], v)) for k, v in spo_map.items()]))
 
+    def _extract_fragment(self, text, start_token_id, end_token_id, mapping=None):
+        if mapping is None:
+            _, mapping = self._tokenizer.match_tokenize(text)
+
+        if start_token_id < 0 or end_token_id >= len(mapping):
+            return None
+
+        start_char_ids = mapping[start_token_id]
+        end_token_id = mapping[end_token_id]
+        if len(start_char_ids) == 0 or len(end_token_id) == 0:
+            print("Wrong token index for text: {}".format(text))
+            return None
+
+        start_char_index, end_char_index = start_char_ids[0], end_token_id[-1]
+        return text[start_char_index: end_char_index + 1]
+
+    def _subject_proba_parse(self, proba):
+        """
+        :param proba: 2D proba matrix of single sentence text with shape (sequence_length, 2)
+        """
+        start = np.where(proba[:, 0] > self._threshold_sub_start)[0]
+        end = np.where(proba[:, 1] > self._threshold_sub_end)[0]
+
+        sample_subject_ids = []
+        for start_index in start:
+            end_indices = end[end >= start_index]
+            if len(end_indices):
+                end_index = end_indices[0]
+                sample_subject_ids.append((start_index, end_index))
+        return sample_subject_ids
+
+    def _object_proba_parse(self, proba):
+        """
+        :param proba:
+        :return:
+        """
+
+    def predict_subjects(self, text):
+        b_single = isinstance(text, str)
+        if b_single:
+            text = [text]
+
+        total_subjects = []
+        subject_preds = self.predict_subjects_proba(text)
+        for i in range(len(text)):
+            sample_subject_ids = self._subject_proba_parse(subject_preds[i, :, :])
+
+            sample_subjects = []
+            if sample_subject_ids:
+                _, mapping = self._tokenizer.match_tokenize(text[i])
+                for start_index, end_index in sample_subject_ids:
+                    subject = self._extract_fragment(text[i], start_index, end_index, mapping=mapping)
+                    if subject:
+                        sample_subjects.append(subject)
+
+            total_subjects.append(sample_subjects)
+        return total_subjects
+
+    def predict_subjects_proba(self, text):
+        """
+        :param text: single text string or list of texts
+        """
+        if isinstance(text, str):
+            text = [text]
+
+        id_list, segment_list = [], []
+        for t in text:
+            token_ids, segment_ids = self._tokenizer.transform(t)
+            id_list.append(token_ids)
+            segment_list.append(segment_ids)
+
+        subject_preds = self._subject_model.predict([id_list, segment_list])
+        return subject_preds
+
     def extract_spoes(self, text):
-        tokens = self._tokenizer.tokenize(text)
-        mapping = self._tokenizer.rematch(text, tokens)
+        # tokens, mapping = self._tokenizer.match_tokenize(text)
         token_ids, segment_ids = self._tokenizer.transform(text)
-
         subject_preds = self._subject_model.predict([[token_ids], [segment_ids]])
-        start = np.where(subject_preds[0, :, 0] > self._threshold_sub_start)[0]  # index of the start token of subject
-        end = np.where(subject_preds[0, :, 1] > self._threshold_sub_end)[0]
-
-        # get subjects
-        subjects = []
-        for i in start:
-            j = end[end >= i]
-            if len(j) > 0:
-                subjects.append((i, j[0]))
+        subjects = self._subject_proba_parse(subject_preds[0, :, :])
 
         if subjects:
             spoes = []
@@ -142,7 +239,6 @@ class SpoPointEvaluator(Evaluator):
             token_ids = np.repeat([token_ids], repeats=num_subjects, axis=0)
             segment_ids = np.repeat([segment_ids], repeats=num_subjects, axis=0)
             subjects = np.array(subjects)
-
             object_preds = self._object_model.predict([token_ids, segment_ids, subjects])
 
             for subject, object_pred in zip(subjects, object_preds):
@@ -236,8 +332,7 @@ class SpoPointPriorEvaluator(SpoPointEvaluator):
         self._searcher = searcher
 
     def extract_spoes(self, text):
-        tokens = self._tokenizer.tokenize(text)
-        mapping = self._tokenizer.rematch(text, tokens)
+        tokens, mapping = self._tokenizer.match_tokenize(text)
         token_ids, segment_ids = self._tokenizer.transform(text)
 
         prior_spoes = dict()
