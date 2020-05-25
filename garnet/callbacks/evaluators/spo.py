@@ -26,11 +26,6 @@ class SPOTriplet(object):
         `subject`, `predicate` and `object_` are all strings
         """
         self.spo = (subject, predicate, object_)
-        # self.spox = (
-        #     spo[0],
-        #     spo[1],
-        #     tuple(sorted([(k, v) for k, v in spo[2].items()])),
-        # )
 
     def __hash__(self):
         return self.spo.__hash__()
@@ -53,6 +48,18 @@ class SPOTriplet(object):
 
     def __repr__(self):
         return self.__str__()
+
+    @property
+    def subject(self):
+        return self.spo[0]
+
+    @property
+    def predicate(self):
+        return self.spo[1]
+
+    @property
+    def object(self):
+        return self.spo[2]
 
 
 class SPOComplexTriplet(SPOTriplet):
@@ -84,6 +91,10 @@ class SPOComplexTriplet(SPOTriplet):
             'predicate': self.spo[1],
             'object': self.obj2dict(self.spo[2])
         }
+
+    @property
+    def object(self):
+        return self.obj2dict(self.spo[2])
 
 
 class SpoPointEvaluator(Evaluator):
@@ -185,9 +196,18 @@ class SpoPointEvaluator(Evaluator):
 
     def _object_proba_parse(self, proba):
         """
-        :param proba:
+        :param proba: 3D proba matrix of single sentence text with shape (sequence_length, num_predicate, 2)
         :return:
         """
+        start = np.where(proba[:, :, 0] > self._threshold_obj_start)
+        end = np.where(proba[:, :, 1] > self._threshold_obj_end)
+
+        poes = []
+        for start_seq_index, start_pre_index in zip(*start):
+            for end_seq_index, end_pre_index in zip(*end):
+                if start_pre_index == end_pre_index and 0 < start_seq_index <= end_seq_index:
+                    poes.append((start_pre_index, (start_seq_index, end_seq_index)))
+        return poes
 
     def predict_subjects(self, text):
         b_single = isinstance(text, str)
@@ -208,7 +228,7 @@ class SpoPointEvaluator(Evaluator):
                         sample_subjects.append(subject)
 
             total_subjects.append(sample_subjects)
-        return total_subjects
+        return total_subjects if not b_single else total_subjects[0]
 
     def predict_subjects_proba(self, text):
         """
