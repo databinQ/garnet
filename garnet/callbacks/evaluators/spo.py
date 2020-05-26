@@ -97,10 +97,34 @@ class SPOComplexTriplet(SPOTriplet):
         return self.obj2dict(self.spo[2])
 
 
-class SpoPointEvaluator(Evaluator):
+class SimpleObjectMixin(object):
+    @staticmethod
+    def schema_restore(spo_list):
+        return list(set([SPOTriplet(s, p, o) for s, p, o in spo_list]))
+
+
+class ComplexObjectMixin(object):
+    @staticmethod
+    def schema_restore(spo_list):
+        """
+        :param spo_list: list of tuple which represents decomposed spo triplet
+        :return: list of SPOComplexTriplet object, each represents one complex spo triplet
+        """
+        spo_map = dict()
+        for s, p, o in spo_list:
+            p1, p2 = p.split('|')
+            sp1 = (s, p1)
+            if sp1 not in spo_map:
+                spo_map[sp1] = dict()
+            spo_map[sp1][p2] = o
+        return list(set([SPOComplexTriplet(k[0], k[1], v) for k, v in spo_map.items()]))
+
+
+class ComplexPointerEvaluator(ComplexObjectMixin, Evaluator):
     def __init__(self,
                  subject_model: Model,
                  object_model: Model,
+                 train_model: Model,
                  dev_data: SpoDataPack,
                  tokenizer: BertTokenizer,
                  threshold_sub_start=0.5,
@@ -112,6 +136,7 @@ class SpoPointEvaluator(Evaluator):
         super().__init__(save_path=save_path, polarity=polarity)
         self._subject_model = subject_model
         self._object_model = object_model
+        self._train_model = train_model
         self._dev_data = dev_data
         self._tokenizer = tokenizer
 
@@ -127,8 +152,8 @@ class SpoPointEvaluator(Evaluator):
         for sample in self._dev_data:
             text, spo_list = sample
 
-            predict_spoes = self.extract(text, mode='object')
-            real_spoes = self._schema_restore(spo_list)
+            predict_spoes = self.extract(text)
+            real_spoes = self.schema_restore(spo_list)
             p_set = set(predict_spoes)
             r_set = set(real_spoes)
 
@@ -153,15 +178,22 @@ class SpoPointEvaluator(Evaluator):
             self.best_metric_value
         ))
 
-    def _schema_restore(self, spo_list):
-        spo_map = dict()
-        for s, p, o in spo_list:
-            p1, p2 = p.split('|')
-            sp1 = (s, p1)
-            if sp1 not in spo_map:
-                spo_map[sp1] = dict()
-            spo_map[sp1][p2] = o
-        return list(set([self.SPO((k[0], k[1], v)) for k, v in spo_map.items()]))
+    def id2schema(self, pid):
+        return self._dev_data.id2schema[pid]
+
+    def _triplet_parse(self, text, triplets):
+        _, mapping = self._tokenizer.match_tokenize(text)
+
+        parsed_triplets = []
+        for s, p, o in triplets:
+            s_start, s_end = s
+            o_start, o_end = o
+            s_text = self._extract_fragment(text, s_start, s_end, mapping=mapping)
+            o_text = self._extract_fragment(text, o_start, o_end, mapping=mapping)
+            p_text = self.id2schema(p)
+            parsed_triplets.append((s_text, p_text, o_text))
+
+        return parsed_triplets
 
     def _extract_fragment(self, text, start_token_id, end_token_id, mapping=None):
         if mapping is None:
@@ -252,8 +284,8 @@ class SpoPointEvaluator(Evaluator):
         subject_preds = self._subject_model.predict([[token_ids], [segment_ids]])
         subjects = self._subject_proba_parse(subject_preds[0, :, :])
 
+        spoes = []
         if subjects:
-            spoes = []
             num_subjects = len(subjects)
 
             token_ids = np.repeat([token_ids], repeats=num_subjects, axis=0)
@@ -262,69 +294,23 @@ class SpoPointEvaluator(Evaluator):
             object_preds = self._object_model.predict([token_ids, segment_ids, subjects])
 
             for subject, object_pred in zip(subjects, object_preds):
-                sub_start, sub_end = subject
-                start = np.where(object_pred[:, :, 0] > self._threshold_obj_start)
-                end = np.where(object_pred[:, :, 1] > self._threshold_obj_end)
+                poes = self._object_proba_parse(object_pred)
 
-                for start_idx, p_idx1 in zip(*start):
-                    for end_idx, p_idx2 in zip(*end):
-                        if p_idx1 == p_idx2 and 0 < start_idx <= end_idx:
-                            spoes.append((
-                                (mapping[sub_start][0], mapping[sub_end][-1]),
-                                p_idx1,
-                                (mapping[start_idx][0], mapping[end_idx][-1])
-                            ))
+                for p, objects in poes:
+                    spoes.append((subject, p, objects))
+        return spoes
 
-            # list of (subject_text, predicate_name, object_text)
-            res = [(text[s[0]: s[1] + 1], self._dev_data.id2schema[p], text[o[0]: o[1] + 1]) for s, p, o in spoes]
-            return res
-        return []
-
-    def extract(self, text, mode='triple'):
+    def extract(self, text):
         spo_list = self.extract_spoes(text)
-        hie_spoes = self._schema_restore(spo_list)
-        return [spo.spo for spo in hie_spoes] if mode == 'triple' else hie_spoes
+        structured = self._triplet_parse(text, spo_list)
+        hie_spoes = self.schema_restore(structured)
+        return hie_spoes
 
-    class SPO(tuple):
-        """
-        用来存三元组的类
-        表现跟tuple基本一致，只是重写了 __hash__ 和 __eq__ 方法，
-        使得在判断两个三元组是否等价时容错性更好。
-        """
-
-        def __init__(self, spo):
-            self.spox = (
-                spo[0],
-                spo[1],
-                tuple(sorted([(k, v) for k, v in spo[2].items()])),
-            )
-            self._spo_raw = spo
-
-        def __hash__(self):
-            return self.spox.__hash__()
-
-        def __eq__(self, spo):
-            return self.spox == spo.spox
-
-        @property
-        def spo(self):
-            return self._spo_raw
-
-        def to_dict(self):
-            return {
-                'subject': self._spo_raw[0],
-                'predicate': self._spo_raw[1],
-                'object': self._spo_raw[2]
-            }
-
-        def __str__(self):
-            return '{}'.format(self.to_dict())
-
-        def __repr__(self):
-            return self.__str__()
+    def load_weights(self, model_path):
+        self._train_model.load_weights(model_path)
 
 
-class SpoPointPriorEvaluator(SpoPointEvaluator):
+class SpoPointPriorEvaluator(PointerEvaluator):
     def __init__(self,
                  subject_model: Model,
                  object_model: Model,
