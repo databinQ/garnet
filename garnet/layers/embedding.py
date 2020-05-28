@@ -68,7 +68,7 @@ class RelativePositionEmbedding(keras.layers.Layer):
         return dict(list(base_config.items()) + list(config.items()))
 
 
-class 
+class
 
 
 custom_objects = {
