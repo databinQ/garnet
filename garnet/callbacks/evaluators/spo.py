@@ -147,6 +147,7 @@ class ComplexPointerEvaluator(ComplexObjectMixin, Evaluator):
 
     def on_epoch_end(self, epoch, logs=None):
         tp, pcp, cp = 1e-10, 1e-10, 1e-10
+        stp, spcp, scp = 1e-10, 1e-10, 1e-10
 
         pbar = tqdm()
         for sample in self._dev_data:
@@ -156,14 +157,25 @@ class ComplexPointerEvaluator(ComplexObjectMixin, Evaluator):
             real_spoes = self.schema_restore(spo_list)
             p_set = set(predict_spoes)
             r_set = set(real_spoes)
+            sp_set = set([spo.subject for spo in p_set])
+            sr_set = set([spo.subject for spo in r_set])
 
             tp += len(p_set & r_set)
             pcp += len(p_set)
             cp += len(r_set)
             f1, precision, recall = 2 * tp / (pcp + cp), tp / pcp, tp / cp
 
+            stp += len(sp_set & sr_set)
+            spcp += len(sp_set)
+            scp += len(sr_set)
+            sf1, sprecision, srecall = 2 * stp / (spcp + scp), stp / spcp, stp / scp
+
             pbar.update()
-            pbar.set_description("f1: {:.4f}, precision: {:.4f}, recall: {:.4f}".format(f1, precision, recall))
+            pbar.set_description(
+                "f1: {:.4f}, p: {:.4f}, r: {:.4f} | sf1: {:.4f}, sp: {:.4f}, sr: {:.4f}".format(
+                    f1, precision, recall,
+                    sf1, sprecision, srecall,
+                ))
 
         pbar.close()
 
@@ -171,11 +183,10 @@ class ComplexPointerEvaluator(ComplexObjectMixin, Evaluator):
             self.update_metric(f1)
             self.save_model()
 
-        print('f1: {:.4f}, precision: {:.4f}, recall: {:.4f}, best f1: {:.4f}\n'.format(
-            f1,
-            precision,
-            recall,
-            self.best_metric_value
+        print('f1: {:.4f}, precision: {:.4f}, recall: {:.4f}, best f1: {:.4f}\n'
+              'subject f1: {:.4f}, subject precision: {:.4f}, subject recall: {:.4f}'.format(
+            f1, precision, recall, self.best_metric_value,
+            sf1, sprecision, srecall,
         ))
 
     def id2schema(self, pid):
@@ -310,7 +321,7 @@ class ComplexPointerEvaluator(ComplexObjectMixin, Evaluator):
         self._train_model.load_weights(model_path)
 
 
-class SpoPointPriorEvaluator(PointerEvaluator):
+class SpoPointPriorEvaluator(ComplexPointerEvaluator):
     def __init__(self,
                  subject_model: Model,
                  object_model: Model,
