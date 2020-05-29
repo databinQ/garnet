@@ -102,6 +102,7 @@ class InternalRelativePositionEmbedding(RelativePositionEmbedding):
 
 custom_objects = {
     'RelativePositionEmbedding': RelativePositionEmbedding,
+    'InternalRelativePositionEmbedding': InternalRelativePositionEmbedding,
 }
 
 keras.utils.get_custom_objects().update(custom_objects)
