@@ -9,6 +9,8 @@
 import keras
 import keras.backend as K
 
+from ..backend.keras_backend import batch_range
+
 
 class RelativePositionEmbedding(keras.layers.Layer):
     """
@@ -68,7 +70,34 @@ class RelativePositionEmbedding(keras.layers.Layer):
         return dict(list(base_config.items()) + list(config.items()))
 
 
-class
+class InternalRelativePositionEmbedding(RelativePositionEmbedding):
+    """
+    Encode the relative position of each step in sequence and one specified step token. Outputs are relative position
+    embeddings of each token step.
+    """
+
+    def compute_relative_position(self, seq, specified):
+        """
+        :param seq: 2D(batch_size, seq_length) or 3D(batch_size, seq_length, input_hidden_size) sequence tensor
+        :param specified: specified step index of each sample in the batch, with shape (batch_size, 1)
+        :return: (batch_size, seq_length, hidden_size)
+        """
+        specified = K.expand_dims(specified, axis=1) if K.ndim(specified) == 1 else specified  # (batch_size, 1)
+        assert K.int_shape(specified)[1] == 1
+
+        range_index = batch_range(seq)  # (batch_size, seq_length)
+        relative_index = range_index - specified
+
+        max_position = (self.input_dim - 1) // 2
+        pos_idx = K.clip(relative_index, -max_position, max_position)
+        pos_idx += max_position
+        return pos_idx  # (batch_size, seq_length)
+
+    def compute_output_shape(self, input_shape):
+        return input_shape[0][0], input_shape[0][1], self.output_dim
+
+    def compute_mask(self, inputs, mask=None):
+        return mask[0] if mask else None
 
 
 custom_objects = {
