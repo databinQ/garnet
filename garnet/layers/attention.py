@@ -67,11 +67,12 @@ class MultiHeadAttention(keras.layers.Layer):
         )
         super(MultiHeadAttention, self).build(input_shape)
 
-    def call(self, inputs, q_mask=None, k_mask=None, v_mask=None, a_mask=None, **kwargs):
+    def call(self, inputs, mask=None, a_mask=None, **kwargs):
         """
-        :param q_mask: mask of query input, set the padding part of the output to 0
-        :param k_mask: mask of key input
-        :param v_mask: mask of value input, prevent attention calculation from including input padding information
+        :param mask: tuple with 3 elements, which represent masks of queries, keys and values
+            - q_mask: mask of query input, set the padding part of the output to 0
+            - k_mask: mask of key input
+            - v_mask: mask of value input, prevent attention calculation from including input padding information
         :param a_mask: mask of attention score tensor
         """
 
@@ -81,6 +82,11 @@ class MultiHeadAttention(keras.layers.Layer):
         v: (batch_size, key_len, hidden_value)
         """
         q, k, v = inputs[:3]
+
+        q_mask, k_mask, v_mask = None, None, None
+        if mask is not None:
+            q_mask, k_mask, v_mask = mask[0], mask[1], mask[2]
+
         if q_mask is not None:
             q_mask = K.cast(q_mask, K.floatx())  # (batch_size, query_len)
         if k_mask is not None:
@@ -116,9 +122,11 @@ class MultiHeadAttention(keras.layers.Layer):
         return o
 
     def compute_output_shape(self, input_shape):
-        return (input_shape[0][0], input_shape[0][1], self.out_dim)
+        return input_shape[0][0], input_shape[0][1], self.out_dim
 
     def compute_mask(self, inputs, mask=None):
+        if mask is not None:
+            return mask[0]
         return None
 
     def get_config(self):
