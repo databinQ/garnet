@@ -26,6 +26,7 @@ class MaskedConv1D(keras.layers.Conv1D):
                 dilation_rate=self.dilation_rate[0]
             )
         else:
+            mask = K.cast(mask, K.floatx())
             mask = K.expand_dims(mask, axis=-1) if K.ndim(mask) == 2 else mask
             inputs *= mask
             outputs = K.conv1d(
@@ -35,6 +36,13 @@ class MaskedConv1D(keras.layers.Conv1D):
                 padding=self.padding,
                 data_format=self.data_format,
                 dilation_rate=self.dilation_rate[0]
+            )
+
+        if self.use_bias:
+            outputs = K.bias_add(
+                outputs,
+                self.bias,
+                data_format=self.data_format
             )
 
         if self.activation is not None:

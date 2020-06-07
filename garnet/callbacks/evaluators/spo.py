@@ -200,13 +200,20 @@ class ComplexPointerEvaluator(ComplexObjectMixin, Evaluator):
             s_start, s_end = s
             o_start, o_end = o
             s_text = self._extract_fragment(text, s_start, s_end, mapping=mapping)
+            if s_text is None:
+                continue
             o_text = self._extract_fragment(text, o_start, o_end, mapping=mapping)
+            if o_text is None:
+                continue
             p_text = self.id2schema(p)
             parsed_triplets.append((s_text, p_text, o_text))
 
         return parsed_triplets
 
     def _extract_fragment(self, text, start_token_id, end_token_id, mapping=None):
+        """
+        Extract subject or object text fragment from raw text string, with given start and end token ids.
+        """
         if mapping is None:
             _, mapping = self._tokenizer.match_tokenize(text)
 
@@ -214,12 +221,13 @@ class ComplexPointerEvaluator(ComplexObjectMixin, Evaluator):
             return None
 
         start_char_ids = mapping[start_token_id]
-        end_token_id = mapping[end_token_id]
-        if len(start_char_ids) == 0 or len(end_token_id) == 0:
-            print("Wrong token index for text: {}".format(text))
+        end_char_id = mapping[end_token_id]
+        if len(start_char_ids) == 0 or len(end_char_id) == 0:
+            print("Wrong token index for text: {}. Start token id: {}, char ids: {}. End token id: {}, char ids: {}"
+                  .format(text, start_token_id, start_char_ids, end_token_id, end_char_id))
             return None
 
-        start_char_index, end_char_index = start_char_ids[0], end_token_id[-1]
+        start_char_index, end_char_index = start_char_ids[0], end_char_id[-1]
         return text[start_char_index: end_char_index + 1]
 
     def _subject_proba_parse(self, proba):
