@@ -18,6 +18,7 @@ class GatedConvBlock(Wrapper):
             raise ValueError("The padding mode of this layer must be `same`, but got {}".format(conv_layer.padding))
 
         super().__init__(conv_layer, **kwargs)
+        self.supports_masking = True
 
         self.num_layers = num_layers
         self.gate_activation = keras.activations.get(gate_activation)
@@ -43,7 +44,7 @@ class GatedConvBlock(Wrapper):
             current_input_shape = input_shape
         super().build(input_shape)
 
-    def call(self, inputs, **kwargs):
+    def call(self, inputs, mask=None):
         current_inputs = inputs
         for i, layer in enumerate(self.conv_layers):
             layer_output = layer(current_inputs)

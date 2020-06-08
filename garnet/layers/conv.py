@@ -48,6 +48,3 @@ class MaskedConv1D(keras.layers.Conv1D):
         if self.activation is not None:
             return self.activation(outputs)
         return outputs
-
-    def compute_mask(self, inputs, mask=None):
-        return mask
