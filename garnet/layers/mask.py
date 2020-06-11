@@ -19,6 +19,9 @@ class MaskRemove(Layer):
     def call(self, inputs, **kwargs):
         return inputs
 
+    def compute_mask(self, inputs, mask=None):
+        return None
+
 
 class MaskExtract(Layer):
     def __init__(self, **kwargs):

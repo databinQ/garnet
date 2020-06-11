@@ -39,7 +39,7 @@ class RelativePositionEmbedding(keras.layers.Layer):
         super().build(input_shape)
 
     def call(self, inputs, **kwargs):
-        pos_idx = self.compute_mask(*inputs)
+        pos_idx = self.compute_relative_position(*inputs)
         return K.gather(self.embeddings, pos_idx)
 
     def compute_relative_position(self, seq1, seq2):
